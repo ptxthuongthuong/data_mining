@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="algorithm-container">
+        <h1>{{ algo_name }}</h1>
+
+        <!-- Thông tin dataset -->
+        {% if dataset_info %}
+            <div class="dataset-info">
+                <p>Dataset hiện tại: {{ uploaded_file }}</p>
+            </div>
+        {% endif %}
+
+        <!-- Form tải lại file dataset mới -->
+        <div class="upload-new-dataset">
+            <h3>Tải lại file dataset mới</h3>
+            <form action="/upload_new_dataset" method="post" enctype="multipart/form-data">
+                <label for="new_dataset_file">Chọn file Excel mới:</label>
+                <input type="file" name="new_dataset_file" id="new_dataset_file" accept=".xlsx,.xls">
+                <button type="submit">Tải lên</button>
+            </form>
+        </div>
+
+        <!-- Nội dung thuật toán riêng -->
+        {% block algorithm_content %}
+        {% endblock %}
+    </div>
+{% endblock %}

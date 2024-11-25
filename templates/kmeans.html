@@ -1,0 +1,32 @@
+{% extends "base_algorithm.html" %}
+<h2>K-Means Clustering</h2>
+{% block algorithm_content %}
+<form action="/run_kmeans" method="POST">
+    <div class="form-group">
+        <label for="k">Số cụm (K):</label>
+        <input type="number" id="k" name="k" class="form-control" min="1" required>
+    </div>
+    <div class="form-group">
+        <label for="cluster_filter">Lọc cụm:</label>
+        <select id="cluster_filter" name="cluster_filter" class="form-control">
+            <option value="">Tất cả</option>
+            {% if result %}
+                {% for i in range(k|int) %}
+                    <option value="{{ i }}" {% if cluster_filter == i|string %}selected{% endif %}>{{ i }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Chạy thuật toán</button>
+</form>
+
+{% if result %}
+<hr>
+<h3>Kết quả</h3>
+<h4>Centroids:</h4>
+<pre>{{ result.centroids }}</pre>
+<h4>Bảng phân cụm:</h4>
+<div>{{ result.data | safe }}</div>
+{% endif %}
+</div>
+{% endblock %}

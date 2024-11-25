@@ -1,0 +1,113 @@
+Để thêm một thuật toán mới vào cấu trúc dự án của bạn, bạn cần thực hiện một số thao tác để 
+đảm bảo rằng thuật toán mới được tích hợp vào giao diện và logic đúng cách. Dưới đây là các 
+bước chi tiết để thêm thuật toán mới vào dự án của bạn:
+
+1. Tạo module thuật toán mới
+Mỗi thuật toán sẽ được tổ chức thành một module riêng biệt trong thư mục algorithms. Đảm bảo 
+rằng bạn thêm một file Python mới chứa logic của thuật toán mới.
+
+Ví dụ: Giả sử bạn muốn thêm thuật toán Decision Tree.
+
+Tạo file cho thuật toán mới: Trong thư mục algorithms, tạo một file mới, ví dụ decision_tree.py.
+
+Viết logic thuật toán: Cài đặt thuật toán Decision Tree trong file decision_tree.py. 
+Cấu trúc file này có thể tương tự như cách bạn đã viết cho Naive Bayes.python
+
+def decision_tree_classifier(df, target_column, input_data):
+    """
+    Implement decision tree algorithm.
+    
+    Args:
+        df (pd.DataFrame): Input dataset.
+        target_column (str): The target column for classification.
+        input_data (dict): Input data for classification, in the form {column_name: value}.
+    
+    Returns:
+        str: The predicted class.
+    """
+    # Logic for Decision Tree classifier
+    # (Placeholder - replace with actual implementation)
+    predicted_class = 'Class_A'  # Example, replace with real prediction logic
+    return predicted_class
+2. Cập nhật giao diện HTML để hỗ trợ thuật toán mới
+Bạn cần đảm bảo rằng giao diện web có thể hiển thị thuật toán mới và người dùng có thể chọn 
+thuật toán đó.
+
+Cập nhật form trên giao diện HTML: Thêm lựa chọn thuật toán mới vào giao diện, 
+ví dụ, trong index.html hoặc bất kỳ template nào bạn sử dụng để chọn thuật toán.
+
+Ví dụ: Thêm lựa chọn "Decision Tree" vào dropdown (hoặc radio buttons):
+
+form method="POST" action="{{ url_for('run_algorithm') }}">
+    <label for="algorithm">Chọn thuật toán:</label>
+    <select id="algorithm" name="algorithm">
+        <option value="naive_bayes">Naive Bayes</option>
+        <option value="decision_tree">Decision Tree</option>
+        <!-- Thêm các thuật toán khác ở đây -->
+    </select>
+    
+    <!-- Các trường nhập liệu khác (target_column, selected_columns, input_values) -->
+    <button type="submit">Chạy Thuật Toán</button>
+</form>
+3. Cập nhật route Flask để xử lý thuật toán mới
+Cập nhật route Flask để xử lý yêu cầu từ form và gọi thuật toán mới 
+khi người dùng chọn thuật toán đó.
+
+Thêm điều kiện trong route để chọn thuật toán: Cập nhật route Flask của bạn 
+(ví dụ: run_algorithm) để kiểm tra người dùng đã chọn thuật toán nào và gọi hàm tương ứng.
+
+@app.route('/run_algorithm', methods=['POST'])
+def run_algorithm():
+    global dataset_info, uploaded_file
+    algorithm = request.form['algorithm']
+    target_column = request.form['target_column']
+    selected_columns = request.form.getlist('selected_columns')
+    input_values = {col: request.form[f'input_values[{col}]'] for col in selected_columns}
+    
+    # Đọc dataset từ file
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+    df = pd.read_excel(filepath)
+    
+    # Kiểm tra thuật toán nào được chọn và gọi hàm tương ứng
+    if algorithm == 'naive_bayes':
+        from algorithms.naive_bayes import naive_bayes_classifier
+        result = naive_bayes_classifier(df, target_column, input_values)
+    elif algorithm == 'decision_tree':
+        from algorithms.decision_tree import decision_tree_classifier
+        result = decision_tree_classifier(df, target_column, input_values)
+    
+    # Trả về giao diện với kết quả
+    result_message = f"Predicted result: {result}"
+    return render_template('algorithm.html', result=result_message, algorithm=algorithm)
+4. Cập nhật giao diện kết quả
+Sau khi thuật toán mới được chọn và chạy, bạn cần cập nhật giao diện để hiển thị kết quả.
+
+Cập nhật template kết quả (algorithm.html): Đảm bảo template kết quả có thể 
+hiển thị kết quả từ bất kỳ thuật toán nào được chọn. Nếu bạn muốn thêm thông tin đặc biệt 
+cho từng thuật toán, bạn có thể điều chỉnh template để hiển thị riêng cho mỗi thuật toán.
+
+<h1>Thuật toán {{ algorithm }} Kết quả</h1>
+<p>{{ result }}</p>
+5. Kiểm tra và thử nghiệm thuật toán mới
+Sau khi bạn đã thêm thuật toán mới, hãy thử nghiệm toàn bộ quy trình từ 
+việc tải lên dataset, chọn thuật toán, nhập dữ liệu, và kiểm tra kết quả để 
+đảm bảo rằng thuật toán mới hoạt động chính xác.
+
+6. Bổ sung các chức năng mở rộng cho thuật toán mới (tuỳ chọn)
+Nếu thuật toán mới có các tham số đặc biệt 
+(như các tùy chọn cấu hình riêng, như max_depth cho Decision Tree), 
+bạn có thể thêm các trường nhập liệu vào form để cho phép người dùng tùy chỉnh thuật toán.
+
+Ví dụ:
+
+<label for="max_depth">Max Depth:</label>
+<input type="number" id="max_depth" name="max_depth">
+Sau đó, cập nhật route Flask để lấy các tham số này và truyền vào hàm thuật toán.
+
+Tóm tắt các bước:
+Tạo module thuật toán mới trong thư mục algorithms.
+Cập nhật giao diện HTML để cho phép người dùng chọn thuật toán mới.
+Cập nhật route Flask để xử lý yêu cầu và gọi thuật toán đúng.
+Cập nhật giao diện kết quả để hiển thị kết quả từ thuật toán mới.
+Kiểm tra và thử nghiệm thuật toán mới.
+Với các bước này, bạn có thể dễ dàng thêm bất kỳ thuật toán mới nào vào dự án của mình mà không làm thay đổi cấu trúc hiện tại quá nhiều.

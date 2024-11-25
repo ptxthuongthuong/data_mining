@@ -1,0 +1,37 @@
+Tôi đang làm một project Flask về các thuật toán data mining với giao diện web chạy trên localhost. Giao diện được xây dựng bằng template HTML, còn logic thuật toán được tách riêng thành các file trong thư mục algorithms. Tôi muốn tạo một thuật toán mới theo cấu trúc sau:
+
+File HTML: templates/algorithm.html sẽ hiển thị giao diện tùy chọn input của thuật toán (nếu cần).
+Route Flask trong app.py: Định nghĩa một route mới để xử lý logic của thuật toán, sử dụng các input từ giao diện.
+File Python logic trong algorithms/: Chứa toàn bộ logic thuật toán để dễ bảo trì.
+Tạo giúp tôi logic và giao diện cho thuật toán [Tên thuật toán].
+
+Yêu cầu giao diện Flask: Khi chọn thuật toán trong menu, giao diện hiển thị các thông tin cần thiết (tên cột, input dữ liệu). Sau đó, form gửi dữ liệu qua route Flask để chạy thuật toán.
+Yêu cầu route Flask: Chứa logic gọi hàm từ file Python trong algorithms/ và trả về kết quả.
+Yêu cầu file Python: Hàm nhận dataset, input từ giao diện và thực hiện thuật toán, trả về kết quả phù hợp.
+Hãy tạo ví dụ chi tiết với thuật toán [Tên thuật toán] và đảm bảo dễ mở rộng.
+
+Tôi đang xây dựng một dự án Python sử dụng Flask để thực hiện các thuật toán data mining như Naive Bayes, Cây Quyết Định, ... Dự án có giao diện web cho phép người dùng tải lên file dữ liệu (file Excel) và chọn các thuật toán để thực hiện phân tích. Giao diện sử dụng HTML và CSS, giúp người dùng dễ dàng chọn các giá trị cột trong dataset và chạy thuật toán. Kết quả của thuật toán sẽ được hiển thị ngay dưới màn hình nhập liệu.
+
+Các yêu cầu của mỗi thuật toán trong giao diện:
+1. **Trang chủ (`index.html`)**: Giao diện cho phép người dùng tải lên file Excel. Sau khi tải lên, file sẽ được xử lý để lấy các cột và giá trị duy nhất trong mỗi cột, giúp người dùng chọn các cột và giá trị để sử dụng cho thuật toán.
+2. **Thuật toán (ví dụ: `naive_bayes.html`)**: 
+   - Cho phép người dùng chọn cột mục tiêu (target column) từ dataset.
+   - Hiển thị danh sách các cột có sẵn và cho phép người dùng chọn các cột cần sử dụng để phân lớp.
+   - Hiển thị các giá trị duy nhất trong mỗi cột đã chọn để người dùng có thể chọn lựa các giá trị cần sử dụng cho thuật toán.
+   - Khi thuật toán được chạy, kết quả sẽ hiển thị ngay dưới màn hình.
+3. **CSS**: Giao diện phải đẹp và dễ sử dụng, các checkbox và các thành phần nhập liệu phải có khoảng cách hợp lý để không gian giao diện tiết kiệm và dễ nhìn.
+4. **Dữ liệu**: Dữ liệu đầu vào là một file Excel, các cột và giá trị trong file này được sử dụng để thực hiện các thuật toán phân lớp.
+
+Yêu cầu:
+- Tạo một giao diện cho thuật toán `Naive Bayes` (hoặc các thuật toán khác) với các phần:
+  - **Chọn cột mục tiêu (target column)**.
+  - **Chọn các cột để phân lớp** (hiển thị các giá trị khác nhau của từng cột khi người dùng chọn cột đó).
+  - **Nút chạy thuật toán** và **hiển thị kết quả** ngay dưới giao diện.
+  - **Thông báo nếu chưa tải lên file dữ liệu**.
+
+Tạo mã HTML và CSS cho thuật toán này trong khuôn khổ dự án Flask mà tôi đã mô tả. Hãy đảm bảo rằng khi tôi muốn thêm một thuật toán mới, quá trình này sẽ dễ dàng và không gặp phải nhiều khó khăn.
+
+Hãy giúp tôi tạo đoạn mã này một cách đồng nhất với cấu trúc dự án hiện tại, bao gồm:
+- File HTML cho thuật toán.
+- Cập nhật logic Flask để chạy thuật toán.
+- Thêm mã CSS để giao diện đẹp và dễ sử dụng.

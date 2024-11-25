@@ -1,0 +1,27 @@
+{% macro select_columns(columns, selected_columns_name) %}
+    <label for="{{ selected_columns_name }}">Chọn các cột sử dụng:</label>
+    <div id="{{ selected_columns_name }}">
+        {% for column in columns %}
+            <input type="checkbox" id="col_{{ column }}" name="{{ selected_columns_name }}" value="{{ column }}">
+            <label for="col_{{ column }}">{{ column }}</label>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+
+
+{% macro input_values(columns, unique_values) %}
+    <div id="input_values">
+        <h3>Nhập dữ liệu cần phân lớp:</h3>
+        {% for column in columns %}
+            <div id="values_{{ column }}" class="value-selection" style="display: none;">
+                <label for="{{ column }}">{{ column }}:</label>
+                <select id="{{ column }}" name="input_values[{{ column }}]">
+                    {% for value in unique_values[column] %}
+                        <option value="{{ value }}">{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endfor %}
+    </div>
+{% endmacro %}
