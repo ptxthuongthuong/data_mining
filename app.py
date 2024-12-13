@@ -31,7 +31,6 @@ def upload_file():
         uploaded_file = file.filename
         
         # Gọi hàm xử lý dataset từ utils.py
-        from utils import update_dataset_info
         dataset_info = update_dataset_info(filepath)
         
         return redirect(url_for('index'))
@@ -77,7 +76,6 @@ def upload_new_dataset():
         uploaded_file = file.filename
 
         # Gọi hàm xử lý dataset từ utils.py
-        from utils import update_dataset_info
         dataset_info = update_dataset_info(filepath)
 
         # Lấy thuật toán hiện tại từ form
@@ -91,6 +89,7 @@ def upload_new_dataset():
 def run_naive_bayes():
     try:
         global dataset_info, uploaded_file
+        global clustered_data, centroids, cluster_labels
         
         # Kiểm tra dữ liệu đầu vào
         if not uploaded_file or not dataset_info:
@@ -148,36 +147,25 @@ def run_naive_bayes():
 def run_kmeans():
     try:
         global dataset_info, uploaded_file
-       
+
         # Kiểm tra dữ liệu đầu vào
         if not uploaded_file or not dataset_info:
             return "Vui lòng tải lên file dữ liệu trước", 400
-           
+
         k = request.form.get('k')
         if not k or not k.isdigit():
             return "Số cụm K không hợp lệ", 400
         k = int(k)
-        
-        # Thêm print để kiểm tra dữ liệu
-        print("Raw selected_columns:", request.form.getlist('selected_columns'))
-        
-        # Loại bỏ ngoặc vuông nếu có
-        selected_columns = [col.strip('[]"') for col in request.form.getlist('selected_columns')]
-        
-        # Loại bỏ các khoảng trắng thừa
-        selected_columns = [col.strip() for col in selected_columns]
-        
-        print("Processed selected_columns:", selected_columns)
-        
+
+        selected_columns = [col.strip('[]"').strip() for col in request.form.getlist('selected_columns')]
+
         if not selected_columns:
             return "Vui lòng chọn ít nhất một cột", 400
-       
-        # Đọc file dữ liệu
+
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
         if not os.path.exists(filepath):
             return "File dữ liệu không tồn tại", 400
-           
-        # Đọc file dựa vào định dạng
+
         file_extension = uploaded_file.split('.')[-1].lower()
         if file_extension in ['xlsx', 'xls']:
             df = pd.read_excel(filepath)
@@ -185,37 +173,50 @@ def run_kmeans():
             df = pd.read_csv(filepath)
         else:
             return "Định dạng file không được hỗ trợ", 400
-           
-        # Kiểm tra các cột được chọn có tồn tại trong DataFrame
+
         invalid_columns = [col for col in selected_columns if col not in df.columns]
         if invalid_columns:
             return f"Các cột sau không tồn tại: {', '.join(invalid_columns)}", 400
-        
-        # Giới hạn dữ liệu theo các cột được chọn
+
         df = df[selected_columns]
-            
-        # Kiểm tra dữ liệu trống
+
         if df.empty:
             return "File dữ liệu trống", 400
-            
-        # Kiểm tra K không được lớn hơn số mẫu
+
         if k > len(df):
             return f"Số cụm K ({k}) không được lớn hơn số mẫu dữ liệu ({len(df)})", 400
-            
-        # Xử lý missing values
+
         df = df.dropna()
         if df.empty:
             return "Dữ liệu không hợp lệ sau khi xử lý missing values", 400
-            
-        # Thực hiện clustering
+
         try:
             preprocessed_data = preprocess_data(df)
             clustered_data, centroids = kmeans_clustering(preprocessed_data, k)
         except Exception as e:
             app.logger.error(f"Lỗi trong quá trình clustering: {str(e)}")
             return f"Lỗi khi thực hiện clustering: {str(e)}", 500
-            
-        # Tạo nội dung kết quả
+
+        # Format centroids rõ ràng hơn
+        centroids_html = "<br>".join([
+            f"Cụm {i + 1}: {', '.join([f'{value:.4f}' for value in centroid])}"
+            for i, centroid in enumerate(centroids)
+        ])
+
+        # Đổi tên cột Cluster thành "Cụm"
+        clustered_data.rename(columns={"Cluster": "Cụm"}, inplace=True)
+
+        # Tạo HTML bảng kết quả với tùy chọn lọc theo cụm
+        unique_clusters = clustered_data['Cụm'].unique()
+        filter_html = "<label for='filter_cluster'>Chọn cụm:</label>"
+        filter_html += "<select id='filter_cluster' onchange='filterCluster()'>"
+        filter_html += "<option value=''>Tất cả</option>"
+        for cluster in unique_clusters:
+            filter_html += f"<option value='{cluster}'>Cụm {cluster}</option>"
+        filter_html += "</select>"
+
+        table_html = clustered_data.to_html(classes='table table-striped', index=False)
+
         result_html = f"""
             <hr>
             <h3>Kết quả</h3>
@@ -223,28 +224,48 @@ def run_kmeans():
             <p>Số mẫu dữ liệu: {len(df)}</p>
             <p>Số thuộc tính: {len(df.columns)}</p>
             <h4>Centroids:</h4>
-            <pre>{str(centroids)}</pre>
+            <p>{centroids_html}</p>
             <h4>Bảng phân cụm:</h4>
-            <div>{clustered_data.to_html(classes='table table-striped', index=False)}</div>
+            <div>
+                {filter_html}
+                <div id='cluster_table'>
+                    {table_html}
+                </div>
+            </div>
+            <script>
+                function filterCluster() {{
+                    const selectedCluster = document.getElementById('filter_cluster').value;
+                    const rows = document.querySelectorAll('#cluster_table table tbody tr');
+                    rows.forEach(row => {{
+                        const clusterCell = row.cells[row.cells.length - 1];
+                        if (selectedCluster === '' || clusterCell.textContent === selectedCluster) {{
+                            row.style.display = '';
+                        }} else {{
+                            row.style.display = 'none';
+                        }}
+                    }});
+                }}
+            </script>  
         """
-        
-        # Kiểm tra loại request và trả về kết quả phù hợp
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return result_html
         return render_template('kmeans.html',
-                            dataset_info=dataset_info,
-                            result=result_html,
-                            uploaded_file=uploaded_file)
-                            
+                               dataset_info=dataset_info,
+                               result=result_html,
+                               uploaded_file=uploaded_file)
+
     except Exception as e:
         app.logger.error(f"Lỗi không mong đợi: {str(e)}")
         error_message = f"Có lỗi xảy ra: {str(e)}"
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return error_message, 500
         return render_template('kmeans.html',
-                            dataset_info=dataset_info,
-                            result=error_message,
-                            uploaded_file=uploaded_file)
+                               dataset_info=dataset_info,
+                               result=error_message,
+                               uploaded_file=uploaded_file)
+
+
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
