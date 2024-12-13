@@ -1,11 +1,16 @@
 {% macro select_columns(columns, selected_columns_name) %}
-    <label for="{{ selected_columns_name }}">Chọn các cột sử dụng:</label>
-    <div id="{{ selected_columns_name }}">
+<div class="form-group">
+    <label>Chọn các cột sử dụng:</label>
+    <div>
         {% for column in columns %}
-            <input type="checkbox" id="col_{{ column }}" name="{{ selected_columns_name }}" value="{{ column }}">
+            <input type="checkbox" 
+                   id="col_{{ column }}" 
+                   name="{{ selected_columns_name }}" 
+                   value="{{ column }}">
             <label for="col_{{ column }}">{{ column }}</label>
         {% endfor %}
     </div>
+</div>
 {% endmacro %}
 
 

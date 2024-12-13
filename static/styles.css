@@ -93,3 +93,59 @@ h2, h3, h4 {
     margin-top: 20px;
     width: 100%;
 }
+
+/* Style cho container kết quả */
+#result-container {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+/* Style cho tiêu đề kết quả */
+#result-container h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+    font-size: 1.2em;
+}
+
+/* Style cho nội dung kết quả */
+#result-container p {
+    color: #47ac0c;
+    font-size: 1.1em;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 10px;
+    background-color: white;
+    border-left: 4px solid #3498db;
+    margin: 0;
+}
+
+/* Animation khi kết quả mới được load */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Áp dụng animation cho kết quả mới */
+#result-container {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Style cho trạng thái loading */
+#result-container p:contains("Đang xử lý...") {
+    color: #7f8c8d;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Style cho thông báo lỗi */
+#result-container p[style*="color: red"] {
+    background-color: #fff5f5;
+    border-left-color: #e74c3c;
+    padding: 15px;
+}

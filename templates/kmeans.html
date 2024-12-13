@@ -1,25 +1,16 @@
 {% extends "base_algorithm.html" %}
-<h2>K-Means Clustering</h2>
+{% from "components.html" import select_columns %}
 {% block algorithm_content %}
-<form action="/run_kmeans" method="POST">
+<h2>K-Means Clustering</h2>
+<form id="kmeans-form">
     <div class="form-group">
         <label for="k">Số cụm (K):</label>
         <input type="number" id="k" name="k" class="form-control" min="1" required>
     </div>
-    <div class="form-group">
-        <label for="cluster_filter">Lọc cụm:</label>
-        <select id="cluster_filter" name="cluster_filter" class="form-control">
-            <option value="">Tất cả</option>
-            {% if result %}
-                {% for i in range(k|int) %}
-                    <option value="{{ i }}" {% if cluster_filter == i|string %}selected{% endif %}>{{ i }}</option>
-                {% endfor %}
-            {% endif %}
-        </select>
-    </div>
+    {{ select_columns(dataset_info.columns, 'selected_columns') }}
     <button type="submit" class="btn btn-primary">Chạy thuật toán</button>
 </form>
-
+<div id="result-container">
 {% if result %}
 <hr>
 <h3>Kết quả</h3>
@@ -29,4 +20,36 @@
 <div>{{ result.data | safe }}</div>
 {% endif %}
 </div>
+<script>
+document.getElementById('kmeans-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+   
+    var formData = new FormData(this);
+   
+    // Hiển thị trạng thái loading
+    document.getElementById('result-container').innerHTML = '<p>Đang xử lý...</p>';
+   
+    fetch('/run_kmeans', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(data => {
+        document.getElementById('result-container').innerHTML = data;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result-container').innerHTML =
+            '<p style="color: red;">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+    });
+});
+</script>
 {% endblock %}
