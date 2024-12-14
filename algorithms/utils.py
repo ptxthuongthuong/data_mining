@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 def update_dataset_info(filepath):
     # Đọc dataset
@@ -18,4 +19,17 @@ def update_dataset_info(filepath):
     columns = df.columns.tolist()
     unique_values = {col: df[col].unique().tolist() for col in columns}
     return {"columns": columns, "unique_values": unique_values}
+
+def encode_data(df):
+    """
+    Mã hóa dữ liệu sử dụng Label Encoding cho tất cả các cột chuỗi.
+    """
+    label_encoders = {}
+    for col in df.columns:
+        if df[col].dtype == 'object':  # Kiểm tra dữ liệu dạng chuỗi
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col])
+            label_encoders[col] = le
+    return df, label_encoders
+
 

@@ -1,0 +1,28 @@
+Metadata-Version: 2.1
+Name: dtreeviz
+Version: 1.4.0
+Summary: A Python 3 library for sci-kit learn, XGBoost, LightGBM, and Spark decision tree visualization
+Home-page: https://github.com/parrt/dtreeviz
+Author: Terence Parr, Tudor Lapusan, and Prince Grover
+Author-email: parrt@cs.usfca.edu
+License: MIT
+Keywords: machine-learning data structures trees visualization
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Developers
+Requires-Python: >=3.6
+License-File: LICENSE
+Requires-Dist: graphviz (>=0.9)
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: colour
+Requires-Dist: pytest
+Provides-Extra: lightgbm
+Requires-Dist: lightgbm ; extra == 'lightgbm'
+Provides-Extra: pyspark
+Requires-Dist: pyspark ; extra == 'pyspark'
+Provides-Extra: xgboost
+Requires-Dist: xgboost ; extra == 'xgboost'
+
+README.md

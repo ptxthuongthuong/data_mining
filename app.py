@@ -2,12 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import os
 import pandas as pd
 from algorithms.naive_bayes import naive_bayes_classifier
-from algorithms.utils import update_dataset_info
+from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
-
+from algorithms.desision_tree import ID3DecisionTree
+from dtreeviz.trees import dtreeviz
 # Khởi tạo ứng dụng Flask
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
+
 
 # Biến toàn cục để lưu thông tin dataset
 uploaded_file = None
@@ -85,62 +87,117 @@ def upload_new_dataset():
         return redirect(url_for('show_algorithm', name=current_algorithm))
 
 # Kết nối logic của naive bayes
+from flask import render_template_string
+
+from flask import Flask, request, render_template
+import pandas as pd
+import os
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 @app.route('/run_naive_bayes', methods=['POST'])
 def run_naive_bayes():
     try:
         global dataset_info, uploaded_file
-        global clustered_data, centroids, cluster_labels
         
         # Kiểm tra dữ liệu đầu vào
         if not uploaded_file or not dataset_info:
+            logger.error('No file uploaded or dataset info missing')
             return "Vui lòng tải lên file dữ liệu trước", 400
 
+        # Lấy thông tin từ form
         target_column = request.form.get('target_column')
         selected_columns = [col.strip() for col in request.form.getlist('selected_columns')]
         
         if not target_column or not selected_columns:
+            logger.error('Missing target column or selected columns')
             return "Thiếu thông tin cần thiết", 400
-
-        # Lấy input values cho các cột được chọn
+        
+        # Lấy giá trị input cho mỗi cột được chọn
         input_values = {col: request.form.get(f'input_values[{col}]') for col in selected_columns}
+        
+        # Kiểm tra Laplace smoothing
         use_laplace = request.form.get('use_laplace') == 'true'
-
-        # Đọc dataset
+        
+        # Kiểm tra file tồn tại
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
         if not os.path.exists(filepath):
+            logger.error(f'File not found: {filepath}')
             return "File dữ liệu không tồn tại", 400
-            
+        
+        # Đọc dữ liệu
         df = pd.read_excel(filepath)
+        logger.debug(f'Data loaded successfully. Shape: {df.shape}')
+        
+        # Thực hiện phân lớp
+        try:
+            result, priors, likelihoods, posteriors = naive_bayes_classifier(
+                df, target_column, input_values, use_laplace
+            )
+            logger.debug('Classification completed successfully')
+        except Exception as e:
+            logger.error(f'Classification error: {str(e)}', exc_info=True)
+            return f"Lỗi khi thực hiện phân lớp: {str(e)}", 500
+        
+        # Tạo bảng HTML cho kết quả
+        priors_table = '<table border="1"><tr><th>Class</th><th>Prior Probability</th></tr>'
+        for target_class, prior in priors.items():
+            priors_table += f'<tr><td>{target_class}</td><td>{prior:.4f}</td></tr>'
+        priors_table += '</table>'
 
-        # Gọi naive bayes classifier
-        from algorithms.naive_bayes import naive_bayes_classifier
-        result = naive_bayes_classifier(df, target_column, input_values, use_laplace)
+        # Likelihoods Table
+        likelihoods_table = '<table border="1"><tr><th>Feature</th><th>Class</th><th>Likelihood</th></tr>'
+        for feature, class_likelihoods in likelihoods.items():
+            for target_class, likelihood in class_likelihoods.items():
+                likelihoods_table += f'<tr><td>{feature}</td><td>{target_class}</td><td>{likelihood:.4f}</td></tr>'
+        likelihoods_table += '</table>'
 
-        # Tạo message kết quả
-        result_message = f"Dữ liệu thuộc lớp: {result}"
-
-        # Kiểm tra nếu là AJAX request
+        # Posteriors Table
+        posteriors_table = '<table border="1"><tr><th>Class</th><th>Posterior Probability</th></tr>'
+        for target_class, posterior in posteriors.items():
+            posteriors_table += f'<tr><td>{target_class}</td><td>{posterior:.4f}</td></tr>'
+        posteriors_table += '</table>'
+        
+        result_message = f"<strong>Dữ liệu thuộc lớp: {result}</strong>"
+        
+        # Nếu là AJAX request
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Trả về HTML kết quả trực tiếp
             return f'''
-                <h3>Kết quả phân lớp:</h3>
-                <p>{result_message}</p>
+                <div class="result-section">
+                    <h3>Kết quả phân lớp:</h3>
+                    <p class="result-message">{result_message}</p>
+                    <div class="calculation-details">
+                        <h4>Chi tiết tính toán:</h4>
+                        <div class="table-section">
+                            <h5>Priors (Xác suất tiên nghiệm):</h5>
+                            {priors_table}
+                        </div>
+                        <div class="table-section">
+                            <h5>Likelihoods (Xác suất có điều kiện):</h5>
+                            {likelihoods_table}
+                        </div>
+                        <div class="table-section">
+                            <h5>Posteriors (Xác suất hậu nghiệm):</h5>
+                            {posteriors_table}
+                        </div>
+                    </div>
+                </div>
             '''
         
-        # Nếu không phải AJAX, trả về full page
-        return render_template('naive_bayes.html',
-                             dataset_info=dataset_info,
-                             result=result_message,
-                             uploaded_file=uploaded_file)
-
+        # Nếu không phải AJAX request
+        return render_template(
+            'naive_bayes.html',
+            result=result_message,
+            priors_table=priors_table,
+            likelihoods_table=likelihoods_table,
+            posteriors_table=posteriors_table
+        )
+        
     except Exception as e:
-        error_message = f"Có lỗi xảy ra: {str(e)}"
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return error_message, 500
-        return render_template('naive_bayes.html',
-                             dataset_info=dataset_info,
-                             result=error_message,
-                             uploaded_file=uploaded_file)
+        logger.error(f'Unexpected error: {str(e)}', exc_info=True)
+        return "Có lỗi xảy ra khi xử lý yêu cầu", 500
 
 # Kết nối logic của k-means
 @app.route('/run_kmeans', methods=['POST'])
@@ -265,11 +322,61 @@ def run_kmeans():
                                result=error_message,
                                uploaded_file=uploaded_file)
 
+# Kết nối logic của Decsition_tree
+@app.route('/run_decision_tree', methods=['POST'])
+def run_decision_tree():
+    try:
+        global dataset_info, uploaded_file
+
+        # Kiểm tra file đã upload hay chưa
+        if not uploaded_file or not dataset_info:
+            return {"error": "Vui lòng tải lên dataset trước khi chạy thuật toán"}, 400
+
+        # Đọc file dataset
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+        df = pd.read_excel(filepath)
+
+        # Lấy thông tin từ form
+        criterion = request.form.get('criterion', 'gini')
+        target_column = request.form.get('target_column')
+        selected_columns = request.form.getlist('selected_columns')
+
+        if not target_column or not selected_columns:
+            return {"error": "Vui lòng chọn cột target và các cột dữ liệu"}, 400
+
+        # Chuẩn bị dữ liệu
+        X = df[selected_columns]
+        y = df[target_column]
+
+        # Khởi tạo và huấn luyện cây quyết định
+        tree = ID3DecisionTree(criterion=criterion)
+        tree.train(X, y)
+
+        # Lấy thông tin cây
+        tree_info = tree.get_tree_info(feature_names=selected_columns)
+
+        # Xuất cây quyết định bằng Graphviz
+        tree_graph = tree.export_tree(
+            feature_names=selected_columns,
+            class_names=tree.class_names
+        )
+
+        # Chuyển đổi Graphviz thành SVG để hiển thị trên web
+        tree_svg = tree_graph.pipe(format="svg").decode("utf-8")
+
+        # Chuẩn bị trả về kết quả
+        return {
+            "tree_graph": tree_svg,
+            "tree_info": tree_info
+        }
+    except Exception as e:
+        return {"error": f"Đã xảy ra lỗi: {str(e)}"}, 500
 
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True)
+
 
 
 

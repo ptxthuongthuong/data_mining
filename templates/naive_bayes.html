@@ -31,9 +31,17 @@
         {% if result %}
             <h3>Kết quả phân lớp:</h3>
             <p>{{ result }}</p>
+
+            <h4>Chi tiết tính toán:</h4>
+            <h5>Priors:</h5>
+            {{ priors_table|safe }}
+            <h5>Likelihoods:</h5>
+            {{ likelihoods_table|safe }}
+            <h5>Posteriors:</h5>
+            {{ posteriors_table|safe }}
         {% endif %}
     </div>
-
+    
     <script>
         // Script cho checkbox columns
         const checkboxes = document.querySelectorAll('input[name="selected_columns"]');
@@ -49,38 +57,33 @@
             });
         });
 
-        // Script cho AJAX submission
-        document.getElementById('naive-bayes-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            var formData = new FormData(this);
-            
-            // Hiển thị trạng thái loading
-            document.getElementById('result-container').innerHTML = '<p>Đang xử lý...</p>';
-            
-            fetch('/run_naive_bayes', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'  // Thêm header này
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(data => {
-                // CHỈ cập nhật phần result-container
-                document.getElementById('result-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('result-container').innerHTML = 
-                    '<p style="color: red;">Có lỗi xảy ra khi xử lý yêu cầu</p>';
-            });
-        });
+    document.getElementById('naive-bayes-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    const resultContainer = document.getElementById('result-container');
+    resultContainer.innerHTML = '<p>Đang xử lý...</p>';
+    
+    fetch('/run_naive_bayes', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new FormData(this)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(html => {
+        resultContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultContainer.innerHTML = '<p class="error-message">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+    });
+});
     </script>
 {% else %}
     <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
