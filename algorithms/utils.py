@@ -24,12 +24,10 @@ def encode_data(df):
     """
     Mã hóa dữ liệu sử dụng Label Encoding cho tất cả các cột chuỗi.
     """
-    label_encoders = {}
-    for col in df.columns:
-        if df[col].dtype == 'object':  # Kiểm tra dữ liệu dạng chuỗi
-            le = LabelEncoder()
-            df[col] = le.fit_transform(df[col])
-            label_encoders[col] = le
-    return df, label_encoders
+    le = LabelEncoder()
+    encoded_df = df.copy()  # Tạo bản sao để tránh warning
+    for col in encoded_df.select_dtypes(include=['object', 'category']).columns:
+        encoded_df.loc[:, col] = le.fit_transform(encoded_df[col])
+    return encoded_df, le
 
 

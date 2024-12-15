@@ -5,7 +5,7 @@ from algorithms.naive_bayes import naive_bayes_classifier
 from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree
-from dtreeviz.trees import dtreeviz
+from sklearn.tree import plot_tree
 # Khởi tạo ứng dụng Flask
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -337,7 +337,7 @@ def run_decision_tree():
         df = pd.read_excel(filepath)
 
         # Lấy thông tin từ form
-        criterion = request.form.get('criterion', 'gini')
+        criterion = request.form.get('criterion', 'entropy')  # Mặc định là 'entropy'
         target_column = request.form.get('target_column')
         selected_columns = request.form.getlist('selected_columns')
 
@@ -348,21 +348,50 @@ def run_decision_tree():
         X = df[selected_columns]
         y = df[target_column]
 
+        # Kiểm tra và chuyển đổi dữ liệu target nếu cần
+        from sklearn.preprocessing import LabelEncoder
+        le_y = LabelEncoder()
+
+        # Nếu target là dữ liệu liên tục, chuyển thành phân loại
+        if pd.api.types.is_numeric_dtype(y):
+            # Thử chia thành các nhóm (bins) nếu là dữ liệu liên tục
+            try:
+                y_encoded = le_y.fit_transform(pd.qcut(y, q=5, labels=False))
+            except ValueError:
+                # Nếu không thể chia bins, sử dụng phương pháp khác
+                y_encoded = le_y.fit_transform(pd.cut(y, bins=5, labels=False))
+        else:
+            # Nếu đã là dữ liệu phân loại
+            y_encoded = le_y.fit_transform(y)
+
+        # Encode dữ liệu đặc trưng
+        X_encoded, _ = encode_data(X)
+
         # Khởi tạo và huấn luyện cây quyết định
         tree = ID3DecisionTree(criterion=criterion)
-        tree.train(X, y)
+        tree.fit(X_encoded, y_encoded, feature_names=selected_columns)
+
+        # Cập nhật class_names với nhãn gốc
+        tree.class_names = le_y.classes_
 
         # Lấy thông tin cây
-        tree_info = tree.get_tree_info(feature_names=selected_columns)
+        tree_info = tree.export_tree()
 
-        # Xuất cây quyết định bằng Graphviz
-        tree_graph = tree.export_tree(
-            feature_names=selected_columns,
-            class_names=tree.class_names
-        )
+        # Visualize cây quyết định bằng plot_tree()
+        import matplotlib.pyplot as plt
+        from io import BytesIO
+        import base64
 
-        # Chuyển đổi Graphviz thành SVG để hiển thị trên web
-        tree_svg = tree_graph.pipe(format="svg").decode("utf-8")
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plot_tree(tree.model, feature_names=selected_columns, class_names=list(map(str, tree.class_names)), ax=ax)
+
+        # Chuyển đổi figure sang định dạng SVG
+        buf = BytesIO()
+        plt.savefig(buf, format='svg')
+        tree_svg = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+        plt.close(fig) 
+        print(tree_info) 
 
         # Chuẩn bị trả về kết quả
         return {
@@ -370,7 +399,10 @@ def run_decision_tree():
             "tree_info": tree_info
         }
     except Exception as e:
-        return {"error": f"Đã xảy ra lỗi: {str(e)}"}, 500
+        # Nếu có lỗi xảy ra, trả về thông báo lỗi
+        import traceback
+        print(traceback.format_exc())  # In chi tiết lỗi để debug
+        return {"error": f"\u0110\u00e3 x\u1ea3y ra l\u1ed7i: {str(e)}"}, 500
 
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
