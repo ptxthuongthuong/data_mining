@@ -4,8 +4,8 @@ import pandas as pd
 from algorithms.naive_bayes import naive_bayes_classifier
 from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
-from algorithms.desision_tree import ID3DecisionTree
-from sklearn.tree import plot_tree
+from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
+
 # Khởi tạo ứng dụng Flask
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -328,81 +328,83 @@ def run_decision_tree():
     try:
         global dataset_info, uploaded_file
 
-        # Kiểm tra file đã upload hay chưa
         if not uploaded_file or not dataset_info:
             return {"error": "Vui lòng tải lên dataset trước khi chạy thuật toán"}, 400
 
-        # Đọc file dataset
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
         df = pd.read_excel(filepath)
 
-        # Lấy thông tin từ form
-        criterion = request.form.get('criterion', 'entropy')  # Mặc định là 'entropy'
+        criterion = request.form.get('criterion', 'entropy')  # 'entropy' hoặc 'gini'
         target_column = request.form.get('target_column')
         selected_columns = request.form.getlist('selected_columns')
 
         if not target_column or not selected_columns:
-            return {"error": "Vui lòng chọn cột target và các cột dữ liệu"}, 400
+            return {"error": "Vui lòng chọn cột mục tiêu và các cột dữ liệu"}, 400
 
-        # Chuẩn bị dữ liệu
+        # Chỉ lấy cột dạng categorical
         X = df[selected_columns]
         y = df[target_column]
 
-        # Kiểm tra và chuyển đổi dữ liệu target nếu cần
-        from sklearn.preprocessing import LabelEncoder
-        le_y = LabelEncoder()
+        if not X.select_dtypes(include='object').shape[1] == len(selected_columns):
+            return {"error": "Chỉ hỗ trợ dữ liệu dạng categorical (chuỗi hoặc phân loại)"}, 400
 
-        # Nếu target là dữ liệu liên tục, chuyển thành phân loại
-        if pd.api.types.is_numeric_dtype(y):
-            # Thử chia thành các nhóm (bins) nếu là dữ liệu liên tục
-            try:
-                y_encoded = le_y.fit_transform(pd.qcut(y, q=5, labels=False))
-            except ValueError:
-                # Nếu không thể chia bins, sử dụng phương pháp khác
-                y_encoded = le_y.fit_transform(pd.cut(y, bins=5, labels=False))
-        else:
-            # Nếu đã là dữ liệu phân loại
-            y_encoded = le_y.fit_transform(y)
-
-        # Encode dữ liệu đặc trưng
-        X_encoded, _ = encode_data(X)
-
-        # Khởi tạo và huấn luyện cây quyết định
+        # Khởi tạo và huấn luyện mô hình Decision Tree
         tree = ID3DecisionTree(criterion=criterion)
-        tree.fit(X_encoded, y_encoded, feature_names=selected_columns)
+        tree.fit(X, y, feature_names=selected_columns)
 
-        # Cập nhật class_names với nhãn gốc
-        tree.class_names = le_y.classes_
-
-        # Lấy thông tin cây
+        # Xuất thông tin cây quyết định
         tree_info = tree.export_tree()
 
-        # Visualize cây quyết định bằng plot_tree()
+        # Lấy chi tiết thông số của từng node
+        node_details_df = tree.export_node_details()
+        
+        # Thêm cột cho việc hiển thị trên giao diện
+        node_details_df['Node Info'] = node_details_df.apply(
+            lambda row: f"Parent: {row['parent_feature'] or 'Root'}, " + 
+                        f"Value: {row['node_value']}, " + 
+                        f"{'Leaf' if row['is_leaf'] else 'Internal Node'}", 
+            axis=1
+        )
+        
+        # Định dạng các cột số để dễ đọc
+        numeric_columns = ['information_gain', 'entropy', 'gini']
+        for col in numeric_columns:
+            if col in node_details_df.columns:
+                node_details_df[col] = node_details_df[col].apply(lambda x: f'{x:.4f}' if pd.notnull(x) else 'N/A')
+        
+        # Chuyển DataFrame sang HTML để hiển thị
+        node_details_html = node_details_df.to_html(
+            classes="table table-bordered table-striped", 
+            index=False, 
+            columns=['Node Info'] + numeric_columns + ['class_distribution']
+        )
+
+        # Visualization (SVG) cho cây quyết định
         import matplotlib.pyplot as plt
         from io import BytesIO
         import base64
 
-        fig, ax = plt.subplots(figsize=(12, 8))
-        plot_tree(tree.model, feature_names=selected_columns, class_names=list(map(str, tree.class_names)), ax=ax)
+        plt = plot_custom_decision_tree(
+            tree.node,
+            feature_names=selected_columns,
+            class_names=list(map(str, tree.class_names))
+        )
 
-        # Chuyển đổi figure sang định dạng SVG
         buf = BytesIO()
         plt.savefig(buf, format='svg')
         tree_svg = base64.b64encode(buf.getvalue()).decode('utf-8')
+        plt.close()
 
-        plt.close(fig) 
-        print(tree_info) 
-
-        # Chuẩn bị trả về kết quả
         return {
             "tree_graph": tree_svg,
-            "tree_info": tree_info
+            "tree_info": tree_info,
+            "node_details": node_details_html
         }
+
     except Exception as e:
-        # Nếu có lỗi xảy ra, trả về thông báo lỗi
         import traceback
-        print(traceback.format_exc())  # In chi tiết lỗi để debug
-        return {"error": f"\u0110\u00e3 x\u1ea3y ra l\u1ed7i: {str(e)}"}, 500
+        print(traceback.format_exc())
+        return {"error": f"Đã xảy ra lỗi: {str(e)}"}, 500
 
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại

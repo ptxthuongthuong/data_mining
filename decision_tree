@@ -1,0 +1,29 @@
+// Decision Tree
+digraph {
+	graph [rankdir=TB]
+	Outlook
+	Humidity
+	Outlook -> Humidity [label=Rainy]
+	"No
+{'No': 3}"
+	Humidity -> "No
+{'No'":" 3}" [label=High]
+	"Yes
+{'Yes': 2}"
+	Humidity -> "Yes
+{'Yes'":" 2}" [label=Normal]
+	"Yes
+{'Yes': 4}"
+	Outlook -> "Yes
+{'Yes'":" 4}" [label=Overcast]
+	Wind
+	Outlook -> Wind [label=Sunny]
+	"Yes
+{'Yes': 3}"
+	Wind -> "Yes
+{'Yes'":" 3}" [label=Weak]
+	"No
+{'No': 2}"
+	Wind -> "No
+{'No'":" 2}" [label=Strong]
+}

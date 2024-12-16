@@ -187,3 +187,15 @@ table tr:hover {
 .node:hover .tooltip {
     display: block;
 }
+
+#tree-graph {
+    border: 2px solid #ddd; /* Viền khung */
+    border-radius: 8px; /* Bo góc khung */
+    padding: 10px; /* Khoảng cách trong khung */
+    margin-top: 20px;
+    background-color: #f9f9f9; /* Màu nền nhẹ */
+    text-align: center; /* Căn giữa nội dung */
+}
+.decision-tree-container h2, h3 {
+    color: #4A5568; /* Màu tiêu đề */
+}

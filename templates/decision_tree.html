@@ -31,6 +31,12 @@
         <h3>Decision Tree Visualization</h3>
         <div id="tree-graph"></div>
     </div>
+
+    <div id="node-details">
+        <h3>Thông số chi tiết</h3>
+        <div id="node-table"></div>
+    </div>
+    
 </div>
 
 <script>
@@ -54,7 +60,11 @@ document.getElementById('decision-tree-options').addEventListener('submit', func
         treeGraph.innerHTML = '';
         const treeImage = new Image();
         treeImage.src = 'data:image/svg+xml;base64,' + data.tree_graph;
+        treeImage.style.borderRadius = '8px'; 
         treeGraph.appendChild(treeImage);
+
+        const nodeTable = document.getElementById('node-table');
+        nodeTable.innerHTML = data.node_details;
     })
     .catch(error => {
         console.error('Error:', error);
