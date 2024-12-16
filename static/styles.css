@@ -93,3 +93,109 @@ h2, h3, h4 {
     margin-top: 20px;
     width: 100%;
 }
+
+/* Style cho container kết quả */
+#result-container {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+/* Style cho tiêu đề kết quả */
+#result-container h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+    font-size: 1.2em;
+}
+
+/* Style cho nội dung kết quả */
+#result-container p {
+    color: #47ac0c;
+    font-size: 1.1em;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 10px;
+    background-color: white;
+    border-left: 4px solid #3498db;
+    margin: 0;
+}
+
+/* Animation khi kết quả mới được load */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Áp dụng animation cho kết quả mới */
+#result-container {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Style cho trạng thái loading */
+#result-container p:contains("Đang xử lý...") {
+    color: #7f8c8d;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Style cho thông báo lỗi */
+#result-container p[style*="color: red"] {
+    background-color: #fff5f5;
+    border-left-color: #e74c3c;
+    padding: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+table th {
+    background-color: #f2f2f2;
+    text-align: center;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.node {
+    position: relative;
+}
+.node .tooltip {
+    display: none;
+    position: absolute;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 5px;
+}
+.node:hover .tooltip {
+    display: block;
+}
+
+#tree-graph {
+    border: 2px solid #ddd; /* Viền khung */
+    border-radius: 8px; /* Bo góc khung */
+    padding: 10px; /* Khoảng cách trong khung */
+    margin-top: 20px;
+    background-color: #f9f9f9; /* Màu nền nhẹ */
+    text-align: center; /* Căn giữa nội dung */
+}
+.decision-tree-container h2, h3 {
+    color: #4A5568; /* Màu tiêu đề */
+}

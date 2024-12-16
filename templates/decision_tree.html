@@ -1,0 +1,75 @@
+{% extends "base_algorithm.html" %}
+{% block algorithm_content %}
+<div class="decision-tree-container">
+    <h2>Decision Tree Configuration</h2>
+
+    <!-- Form for Decision Tree Options -->
+    <form id="decision-tree-options" method="POST">
+        <div>
+            <label><input type="radio" name="criterion" value="gini" checked> Gini</label>
+            <label><input type="radio" name="criterion" value="entropy"> Gain</label>
+        </div>
+
+        <!-- Select columns and target column -->
+        <div class="form-group">
+            <label for="target_column">Chọn cột mục tiêu:</label>
+            <select id="target_column" name="target_column" class="form-control">
+                {% for column in dataset_info.columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% from "components.html" import select_columns %}
+        {{ select_columns(dataset_info.columns, "selected_columns") }}
+
+        <button type="submit" class="btn btn-primary">Run Decision Tree</button>
+    </form>
+
+    <!-- Tree Visualization -->
+    <div id="tree-visualization">
+        <h3>Decision Tree Visualization</h3>
+        <div id="tree-graph"></div>
+    </div>
+
+    <div id="node-details">
+        <h3>Thông số chi tiết</h3>
+        <div id="node-table"></div>
+    </div>
+    
+</div>
+
+<script>
+document.getElementById('decision-tree-options').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch('/run_decision_tree', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Hiển thị cây quyết định
+        const treeGraph = document.getElementById('tree-graph');
+        treeGraph.innerHTML = '';
+        const treeImage = new Image();
+        treeImage.src = 'data:image/svg+xml;base64,' + data.tree_graph;
+        treeImage.style.borderRadius = '8px'; 
+        treeGraph.appendChild(treeImage);
+
+        const nodeTable = document.getElementById('node-table');
+        nodeTable.innerHTML = data.node_details;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Đã xảy ra lỗi trong quá trình xử lý.');
+    });
+});
+</script>
+{% endblock %}

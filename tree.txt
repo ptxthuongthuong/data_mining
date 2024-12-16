@@ -1,0 +1,23 @@
+project
+├── algorithms
+│   ├── _pycache_
+│   ├── kmeans.py
+│   ├── naive_bayes.py
+│   └── utils.py
+├── data_mining
+├── myvenv
+├── static
+│   ├── templates
+│   │   ├── base_algorithm.html (M)
+│   │   ├── base.html
+│   │   ├── components.html
+│   │   ├── index.html (M)
+│   │   ├── kmeans.html (M)
+│   │   └── naive_bayes.html (M)
+│   └── uploads
+├── .gitattributes
+├── add_new
+├── app.py (M)
+├── promt.txt
+├── README.md
+└── requirements.txt

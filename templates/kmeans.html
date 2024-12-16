@@ -1,32 +1,118 @@
 {% extends "base_algorithm.html" %}
-<h2>K-Means Clustering</h2>
+{% from "components.html" import select_columns %}
 {% block algorithm_content %}
-<form action="/run_kmeans" method="POST">
+<h2>K-Means Clustering</h2>
+<form id="kmeans-form">
     <div class="form-group">
         <label for="k">Số cụm (K):</label>
         <input type="number" id="k" name="k" class="form-control" min="1" required>
     </div>
-    <div class="form-group">
-        <label for="cluster_filter">Lọc cụm:</label>
-        <select id="cluster_filter" name="cluster_filter" class="form-control">
-            <option value="">Tất cả</option>
-            {% if result %}
-                {% for i in range(k|int) %}
-                    <option value="{{ i }}" {% if cluster_filter == i|string %}selected{% endif %}>{{ i }}</option>
-                {% endfor %}
-            {% endif %}
-        </select>
-    </div>
+    {{ select_columns(dataset_info.columns, 'selected_columns') }}
     <button type="submit" class="btn btn-primary">Chạy thuật toán</button>
 </form>
-
+<div id="result-container">
 {% if result %}
-<hr>
-<h3>Kết quả</h3>
-<h4>Centroids:</h4>
-<pre>{{ result.centroids }}</pre>
-<h4>Bảng phân cụm:</h4>
-<div>{{ result.data | safe }}</div>
+<div>
+    <h2>Kết quả phân cụm</h2>
+    <p>Số mẫu dữ liệu: <strong>{{ dataset_info['num_samples'] }}</strong></p>
+    <p>Số thuộc tính: <strong>{{ dataset_info['num_features'] }}</strong></p>
+</div>
+
+<div>
+    <h3>Tâm của từng cụm</h3>
+    <ul>
+        {% for i, centroid in enumerate(centroids) %}
+        <li><strong>Cụm {{ i + 1 }}:</strong> {{ centroid }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div>
+    <h3>Số lượng mẫu trong từng cụm</h3>
+    <ul>
+        {% for cluster, count in cluster_counts.items() %}
+        <li><strong>Cụm {{ cluster + 1 }}:</strong> {{ count }} mẫu</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div>
+    <h3>Bảng dữ liệu phân cụm</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                {% for col in dataset_info['columns'] %}
+                <th>{{ col }}</th>
+                {% endfor %}
+                <th>Nhóm (Cụm)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in clustered_data %}
+            <tr>
+                {% for value in row[:-1] %}
+                <td>{{ value }}</td>
+                {% endfor %}
+                <td>Cụm {{ row[-1] + 1 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div>
+    <h3>Giải thích kết quả</h3>
+    <p>
+        Hệ thống đã chia dữ liệu thành <strong>{{ len(centroids) }}</strong> nhóm dựa trên đặc điểm của các mẫu dữ liệu. 
+        Các cụm có tâm (tâm cụm) được hiển thị ở trên. 
+        Bạn có thể xem nhóm của từng mẫu dữ liệu trong bảng phân cụm.
+    </p>
+</div>
 {% endif %}
 </div>
+<script>
+document.getElementById('kmeans-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+   
+    var formData = new FormData(this);
+   
+    // Hiển thị trạng thái loading
+    document.getElementById('result-container').innerHTML = '<p>Đang xử lý...</p>';
+   
+    fetch('/run_kmeans', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(data => {
+        document.getElementById('result-container').innerHTML = data;
+        
+        // Thêm hàm filterCluster() vào đây sau khi nội dung được load
+        window.filterCluster = function() {
+            const selectedCluster = document.getElementById('filter_cluster').value;
+            const rows = document.querySelectorAll('#cluster_table table tbody tr');
+            rows.forEach(row => {
+                const clusterCell = row.cells[row.cells.length - 1];
+                if (selectedCluster === '' || clusterCell.textContent === selectedCluster) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        };
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result-container').innerHTML =
+            '<p style="color: red;">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+    });
+});
+</script>
 {% endblock %}

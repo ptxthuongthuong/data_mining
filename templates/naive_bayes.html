@@ -1,53 +1,90 @@
 {% extends "base_algorithm.html" %}
 {% block algorithm_content %}
 {% from "components.html" import select_columns, input_values %}
-<!-- Chèn giao diện riêng của từng thuật toán tại đây -->
 
 {% if dataset_info %}
-     <form action="/run_naive_bayes" method="post">
-         <!-- Chọn cột mục tiêu -->
-         <label for="target_column">Chọn cột mục tiêu (target):</label>
-         <select name="target_column" id="target_column">
-             {% for column in dataset_info['columns'] %}
-                 <option value="{{ column }}">{{ column }}</option>
-             {% endfor %}
-         </select>
-         <br>
- 
-         <!-- Chọn các cột sử dụng để phân lớp -->
-         <!-- Hiển thị giá trị khác nhau cho từng cột được chọn -->
-         <!-- Sử dụng macro -->
-         {{ select_columns(dataset_info['columns'], "selected_columns") }}
-         <br>
-         {{ input_values(dataset_info['columns'], dataset_info['unique_values']) }}
-         <br>
-         <label for="use_laplace">Sử dụng Laplace smoothing?</label>
-         <input type="checkbox" id="use_laplace" name="use_laplace" value="true">
-         <br>
-         <!-- Nút submit -->
-         <button type="submit">Chạy Naive Bayes</button>
-     </form>
-     <script>
-         // Hiển thị các giá trị chỉ khi cột được chọn
-         const checkboxes = document.querySelectorAll('input[name="selected_columns"]');
-         checkboxes.forEach(checkbox => {
-             checkbox.addEventListener('change', function() {
-                 const columnId = 'values_' + this.value;
-                 const columnDiv = document.getElementById(columnId);
-                 if (this.checked) {
-                     columnDiv.style.display = 'block';
-                 } else {
-                     columnDiv.style.display = 'none';
-                 }
-             });
-         });
-     </script>
-    {% if result %}
-        <div id="result">
+    <!-- Form section -->
+    <div class="form-section">
+         <form id="naive-bayes-form" action="/run_naive_bayes" method="post">
+             <!-- Các trường form giữ nguyên -->
+             <label for="target_column">Chọn cột mục tiêu (target):</label>
+             <select name="target_column" id="target_column">
+                 {% for column in dataset_info['columns'] %}
+                     <option value="{{ column }}">{{ column }}</option>
+                 {% endfor %}
+             </select>
+             <br>
+     
+             {{ select_columns(dataset_info['columns'], "selected_columns") }}
+             <br>
+             {{ input_values(dataset_info['columns'], dataset_info['unique_values']) }}
+             <br>
+             <label for="use_laplace">Sử dụng Laplace smoothing?</label>
+             <input type="checkbox" id="use_laplace" name="use_laplace" value="true">
+             <br>
+             <button type="submit">Chạy Naive Bayes</button>
+         </form>
+    </div>
+
+    <!-- Result section - LUÔN để riêng biệt với form -->
+    <div id="result-container">
+        {% if result %}
             <h3>Kết quả phân lớp:</h3>
             <p>{{ result }}</p>
-        </div>
-    {% endif %}
+
+            <h4>Chi tiết tính toán:</h4>
+            <h5>Priors:</h5>
+            {{ priors_table|safe }}
+            <h5>Likelihoods:</h5>
+            {{ likelihoods_table|safe }}
+            <h5>Posteriors:</h5>
+            {{ posteriors_table|safe }}
+        {% endif %}
+    </div>
+    
+    <script>
+        // Script cho checkbox columns
+        const checkboxes = document.querySelectorAll('input[name="selected_columns"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const columnId = 'values_' + this.value;
+                const columnDiv = document.getElementById(columnId);
+                if (this.checked) {
+                    columnDiv.style.display = 'block';
+                } else {
+                    columnDiv.style.display = 'none';
+                }
+            });
+        });
+
+    document.getElementById('naive-bayes-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    const resultContainer = document.getElementById('result-container');
+    resultContainer.innerHTML = '<p>Đang xử lý...</p>';
+    
+    fetch('/run_naive_bayes', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new FormData(this)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(html => {
+        resultContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultContainer.innerHTML = '<p class="error-message">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+    });
+});
+    </script>
 {% else %}
     <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
 {% endif %}
