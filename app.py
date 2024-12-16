@@ -5,6 +5,8 @@ from algorithms.naive_bayes import naive_bayes_classifier
 from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
+from algorithms.apriori import apriori_algorithm
+
 
 # Khởi tạo ứng dụng Flask
 app = Flask(__name__)
@@ -48,6 +50,7 @@ def show_algorithm(name):
         "naive_bayes": "naive_bayes.html",
         "decision_tree": "decision_tree.html",
         "kmeans" : "kmeans.html",
+        "apriori":"apriori.html"
         # Thêm các thuật toán khác tại đây
     }
 
@@ -406,6 +409,31 @@ def run_decision_tree():
         print(traceback.format_exc())
         return {"error": f"Đã xảy ra lỗi: {str(e)}"}, 500
 
+@app.route('/run_apriori', methods=['POST'])
+def run_apriori():
+    global dataset_info, uploaded_file
+
+    # Lấy các tham số từ form
+    transaction_columns = request.form.getlist('transaction_columns')
+    min_support = float(request.form['min_support'])
+    min_confidence = float(request.form['min_confidence'])
+
+    # Đọc dataset từ file
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+    df = pd.read_excel(filepath)
+
+    # Chuyển đổi dữ liệu thành danh sách giao dịch
+    transactions = df[transaction_columns].values.tolist()
+
+    # Gọi thuật toán Apriori
+    result = apriori_algorithm(transactions, min_support, min_confidence)
+
+
+    # Trả về kết quả cho giao diện
+    return render_template('apriori.html',
+                           dataset_info=dataset_info,
+                           result=result,
+                           uploaded_file=uploaded_file)
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
