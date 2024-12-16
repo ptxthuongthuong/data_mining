@@ -10,6 +10,7 @@
     <nav>
         <ul>
             <li><a href="{{ url_for('index') }}">Trang chủ</a></li>
+            <li><a href="{{ url_for('show_algorithm', name='apriori') }}">Apriori</a></li>
             <li><a href="{{ url_for('show_algorithm', name='naive_bayes') }}">Naive Bayes</a></li>
             <li><a href="{{ url_for('show_algorithm', name='decision_tree') }}">Cây Quyết Định</a></li>
             <li><a href="{{ url_for('show_algorithm', name='kmeans') }}">K-Means</a></li>
