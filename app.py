@@ -51,8 +51,8 @@ def show_algorithm(name):
         "naive_bayes": "naive_bayes.html",
         "decision_tree": "decision_tree.html",
         "kmeans" : "kmeans.html",
-        "apriori":"apriori.html"
-        # Thêm các thuật toán khác tại đây
+        "apriori":"apriori.html",
+        "reduct" : "reduct.html"
     }
 
     if name not in templates:
@@ -454,6 +454,7 @@ def run_reduct():
     # Đọc file Excel
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
     df = pd.read_excel(filepath)
+    print(f"Filepath: {filepath}")
 
     # Tiền xử lý dữ liệu
     df = preprocess_data(df, normalize=True)

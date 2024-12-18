@@ -1,6 +1,6 @@
 {% extends "base_algorithm.html" %}
+{% from "components.html" import select_columns %}
 {% block algorithm_content %}
-
 {% if dataset_info %}
     <!-- Form section -->
     <div class="form-section">
@@ -15,8 +15,7 @@
              <br>
 
              <!-- Chọn thuộc tính để tính xấp xỉ -->
-             {% from "components.html" import select_attributes %}
-             {{ select_attributes(dataset_info['columns'], "selected_columns") }}
+             {{ select_columns (dataset_info['columns'], "selected_columns") }}
 
              <br>
              <button type="submit">Tính xấp xỉ và vùng biên</button>
