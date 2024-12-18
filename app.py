@@ -6,6 +6,7 @@ from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
 from algorithms.apriori import apriori_algorithm
+from algorithms.reduct import preprocess_data, lower_approximation, upper_approximation, boundary_region, outside_region
 
 
 # Khởi tạo ứng dụng Flask
@@ -434,6 +435,47 @@ def run_apriori():
                            dataset_info=dataset_info,
                            result=result,
                            uploaded_file=uploaded_file)
+
+
+@app.route('/run_reduct', methods=['POST'])
+def run_reduct():
+    global dataset_info, uploaded_file
+    if not dataset_info:
+        return "No dataset uploaded. Please upload a file first."
+
+    # Lấy file và các thông tin từ form
+    target_column = request.form.get('target_column')  # Thuộc tính quyết định
+    selected_columns = request.form.getlist('selected_columns')  # Các thuộc tính điều kiện
+
+    # Kiểm tra xem người dùng đã chọn các thuộc tính chưa
+    if not target_column or not selected_columns:
+        return "Vui lòng chọn thuộc tính quyết định và các thuộc tính điều kiện."
+    
+    # Đọc file Excel
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+    df = pd.read_excel(filepath)
+
+    # Tiền xử lý dữ liệu
+    df = preprocess_data(df, normalize=True)
+
+    # Tính toán xấp xỉ dưới, xấp xỉ trên, vùng biên và vùng ngoài
+    lower = lower_approximation(df, target_column, selected_columns)
+    upper = upper_approximation(df, target_column, selected_columns)
+    boundary = boundary_region(df, target_column, selected_columns)
+    outside = outside_region(df, target_column, selected_columns)
+
+    # Chuẩn bị kết quả để trả về
+    result = {
+        "lower_approximation": lower.to_string(),
+        "upper_approximation": upper.to_string(),
+        "boundary": boundary.to_string(),
+        "outside": outside.to_string(),
+    }
+
+    # Trả kết quả cho người dùng
+    return render_template('reduct.html', result=result)
+
+
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
