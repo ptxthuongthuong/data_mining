@@ -27,6 +27,7 @@ class ID3DecisionTree:
         self.criterion = criterion
         self.class_names = None
         self.node_details = []
+        self.nodes_cache = {}
 
     def fit(self, X, y, feature_names):
         """Fit the decision tree model."""
@@ -117,7 +118,7 @@ class ID3DecisionTree:
                 best_feature_groups)
 
     def _id3_recv(self, x_ids, feature_ids, node, parent_feature=None, parent_value=None):
-        """Recursive ID3 algorithm implementation."""
+        """Recursive ID3 algorithm implementation with independent child nodes for each branch."""
         if not node:
             node = Node()
 
@@ -191,17 +192,22 @@ class ID3DecisionTree:
         for feature_value, value_labels in feature_groups.items():
             child = Node()
             child.value = feature_value
+            
             node.childs.append(child)
 
             # Get sample ids for this feature value
             child_x_ids = [x_ids[i] for i in range(len(x_ids)) 
-                           if self.X[x_ids[i]][best_feature_id] == feature_value]
+                        if self.X[x_ids[i]][best_feature_id] == feature_value]
 
-            # Recursively build subtree
+            # Create new node for each parent branch (to avoid sharing nodes)
+            child_node = Node()  # Create a new child node for each parent branch
+            child_node.value = feature_value
+            
+            # Recursively build the subtree for this new child node
             child.next = self._id3_recv(
                 child_x_ids, 
                 remaining_feature_ids, 
-                child.next, 
+                child_node,  # Pass the new child node
                 parent_feature=best_feature_name,
                 parent_value=feature_value
             )
@@ -234,242 +240,86 @@ class ID3DecisionTree:
         
         return '\n'.join(tree_desc)
     
-# def plot_custom_decision_tree(node, feature_names=None, class_names=None):
-#     """
-#     Vẽ cây quyết định từ cấu trúc Node của ID3DecisionTree
-    
-#     Parameters:
-#     - node: Nút gốc của cây
-#     - feature_names: Danh sách tên các đặc trưng (tùy chọn)
-#     - class_names: Danh sách tên các lớp (tùy chọn)
-#     """
-#     # Tạo đồ thị
-#     G = nx.DiGraph()
-    
-#     # Thông tin vị trí các nút
-#     pos = {}
-    
-#     # Hàm đệ quy để duyệt cây và thêm các nút
-#     def add_nodes(current_node, parent=None, edge_label=None, depth=0, pos_x=0):
-#         if current_node is None:
-#             return pos_x
-        
-#         # Xác định nhãn nút
-#         if current_node.value is not None:
-#             node_label = str(current_node.value)
-            
-#             # Nếu là nút lá, thêm thông tin phân phối lớp
-#             if not current_node.childs:
-#                 if current_node.class_distribution:
-#                     class_dist = dict(current_node.class_distribution)
-#                     node_label += f"\n{class_dist}"
-#         else:
-#             node_label = "Root"
-        
-#         # Thêm nút vào đồ thị
-#         G.add_node(node_label)
-        
-#         # Đặt vị trí của nút (sắp xếp theo chiều dọc)
-#         pos[node_label] = (pos_x, -depth)  # Đảo ngược trục y để cây đi xuống
-        
-#         # Kết nối với nút cha nếu có
-#         if parent is not None:
-#             G.add_edge(parent, node_label, label=edge_label or '')
-        
-#         # Đệ quy với các nút con
-#         if current_node.childs:
-#             # Căn giữa các nút con
-#             new_pos_x = pos_x - len(current_node.childs) // 2  # Căn giữa
-#             for child in current_node.childs:
-#                 new_pos_x = add_nodes(child.next, node_label, child.value, depth + 1, new_pos_x)
-#                 new_pos_x += 1  # Tăng thêm một bước cho mỗi nút con để tránh chồng lấn
-        
-#         return pos_x
-    
-#     # Bắt đầu duyệt cây từ nút gốc
-#     add_nodes(node)
-    
-#     # Vẽ đồ thị
-#     plt.figure(figsize=(20, 10))
-    
-#     # Vẽ nút
-#     nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-#             node_size=3000, font_size=8, font_weight='bold', font_color='black')
-    
-#     # Vẽ nhãn cạnh
-#     edge_labels = nx.get_edge_attributes(G, 'label')
-#     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    
-#     plt.title("Decision Tree Visualization")
-#     plt.axis('off')
-    
-#     return plt
-
-# def plot_custom_decision_tree(node, feature_names=None, class_names=None):
-#     """
-#     Vẽ cây quyết định từ cấu trúc Node của ID3DecisionTree
-    
-#     Parameters:
-#     - node: Nút gốc của cây
-#     - feature_names: Danh sách tên các đặc trưng (tùy chọn)
-#     - class_names: Danh sách tên các lớp (tùy chọn)
-#     """
-#     # Tạo đồ thị
-#     G = nx.DiGraph()
-    
-#     # Thông tin vị trí các nút
-#     pos = {}
-    
-#     # Hàm đệ quy để duyệt cây và thêm các nút
-#     def add_nodes(current_node, parent=None, edge_label=None, depth=0, pos_x=0):
-#         if current_node is None:
-#             return pos_x
-        
-#         # Xác định nhãn nút
-#         if current_node.value is not None:
-#             node_label = str(current_node.value)
-            
-#             # Nếu là nút lá, thêm thông tin phân phối lớp
-#             if not current_node.childs:
-#                 if current_node.class_distribution:
-#                     class_dist = dict(current_node.class_distribution)
-#                     node_label += f"\n{class_dist}"
-#         else:
-#             node_label = "Root"
-        
-#         # Thêm nút vào đồ thị
-#         G.add_node(node_label)
-        
-#         # Đặt vị trí của nút (sắp xếp theo chiều dọc)
-#         pos[node_label] = (pos_x, -depth)  # Đảo ngược trục y để cây đi xuống
-        
-#         # Kết nối với nút cha nếu có
-#         if parent is not None:
-#             G.add_edge(parent, node_label, label=edge_label or '')
-        
-#         # Đệ quy với các nút con
-#         if current_node.childs:
-#             # Căn giữa các nút con
-#             new_pos_x = pos_x - len(current_node.childs) // 2  # Căn giữa
-#             for child in current_node.childs:
-#                 new_pos_x = add_nodes(child.next, node_label, child.value, depth + 1, new_pos_x)
-#                 new_pos_x += 1  # Tăng thêm một bước cho mỗi nút con để tránh chồng lấn
-        
-#         return pos_x
-    
-#     # Bắt đầu duyệt cây từ nút gốc
-#     add_nodes(node)
-    
-#     # Vẽ đồ thị
-#     plt.figure(figsize=(12, 8))  # Giới hạn kích thước đồ thị
-#     nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-#             node_size=3000, font_size=8, font_weight='bold', font_color='black')
-    
-#     # Vẽ nhãn cạnh
-#     edge_labels = nx.get_edge_attributes(G, 'label')
-#     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    
-#     # Tối ưu hóa bố cục để tránh chồng lấn
-#     plt.tight_layout()
-    
-#     # Đảm bảo không có phần nào bị cắt
-#     plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
-    
-#     plt.title("Decision Tree Visualization")
-#     plt.axis('off')
-    
-#     return plt
 
 def plot_custom_decision_tree(node, feature_names=None, class_names=None):
     """
-    Vẽ cây quyết định từ cấu trúc Node của ID3DecisionTree
-    
-    Parameters:
-    - node: Nút gốc của cây
-    - feature_names: Danh sách tên các đặc trưng (tùy chọn)
-    - class_names: Danh sách tên các lớp (tùy chọn)
+    Vẽ cây quyết định với kích thước nhỏ gọn hơn
     """
-    # Tạo đồ thị
     G = nx.DiGraph()
-    
-    # Thông tin vị trí các nút
     pos = {}
+    display_names = {}
     
-    # Hàm đệ quy để duyệt cây và thêm các nút
-    def add_nodes(current_node, parent=None, edge_label=None, depth=0, pos_x=0, level_widths=None):
+    def add_nodes(current_node, parent=None, edge_label=None, depth=0, pos_x=0, parent_path=""):
         if current_node is None:
             return pos_x
-        
-        # Xác định nhãn nút
-        if current_node.value is not None:
-            node_label = str(current_node.value)
             
-            # Nếu là nút lá, thêm thông tin phân phối lớp
-            if not current_node.childs:
-                if current_node.class_distribution:
-                    class_dist = dict(current_node.class_distribution)
-                    node_label += f"\n{class_dist}"
+        if current_node.value is not None:
+            base_label = str(current_node.value)
+            
+            if not current_node.childs and current_node.class_distribution:
+                class_dist = dict(current_node.class_distribution)
+                base_label += f"\n{class_dist}"
+                
+            full_path = f"{parent_path}_{base_label}" if parent_path else base_label
+            display_names[full_path] = base_label
         else:
-            node_label = "Root"
+            full_path = "Root"
+            display_names[full_path] = "Root"
         
-        # Thêm nút vào đồ thị
-        G.add_node(node_label)
+        G.add_node(full_path)
         
-        # Đặt vị trí của nút (sắp xếp theo chiều dọc)
-        pos[node_label] = (pos_x, -depth)  # Đảo ngược trục y để cây đi xuống
+        # Điều chỉnh khoảng cách giữa các level
+        level_spacing = 1.0  # Giảm xuống từ 2.0
         
-        # Cập nhật chiều rộng của từng cấp độ
-        if level_widths is None:
-            level_widths = {}
+        if parent is None:
+            pos[full_path] = (0, 0)
+        else:
+            # Điều chỉnh khoảng cách ngang giữa các node
+            sibling_spacing = 1.2  # Giảm xuống từ 2.0
+            pos[full_path] = (pos_x * sibling_spacing, -depth * level_spacing)
         
-        if depth not in level_widths:
-            level_widths[depth] = []
-        
-        level_widths[depth].append(pos_x)
-        
-        # Kết nối với nút cha nếu có
         if parent is not None:
-            G.add_edge(parent, node_label, label=edge_label or '')
+            G.add_edge(parent, full_path, label=edge_label or '')
         
-        # Đệ quy với các nút con
         if current_node.childs:
-            # Căn giữa các nút con
-            new_pos_x = pos_x - len(current_node.childs) // 2  # Căn giữa
-            for child in current_node.childs:
-                new_pos_x = add_nodes(child.next, node_label, child.value, depth + 1, new_pos_x, level_widths)
-                new_pos_x += 1  # Tăng thêm một bước cho mỗi nút con để tránh chồng lấn
+            num_children = len(current_node.childs)
+            # Điều chỉnh khoảng cách giữa các node con
+            child_spacing = 0.6  # Giảm xuống để các node con gần nhau hơn
+            start_pos = pos_x - (num_children - 1) * child_spacing / 2
+            
+            for i, child in enumerate(current_node.childs):
+                child_pos = start_pos + i * child_spacing
+                add_nodes(child.next, full_path, child.value, 
+                         depth + 1, child_pos, full_path)
         
         return pos_x
     
-    # Bắt đầu duyệt cây từ nút gốc
     add_nodes(node)
     
-    # Điều chỉnh vị trí các nút con để căn giữa cây
-    min_x = min([pos[node][0] for node in pos])
-    max_x = max([pos[node][0] for node in pos])
-    tree_width = max_x - min_x
-    shift_x = -min_x + (tree_width / 2)  # Dịch cây vào giữa
+    # Tính toán kích thước của đồ thị
+    all_x = [coord[0] for coord in pos.values()]
+    all_y = [coord[1] for coord in pos.values()]
+    width = max(all_x) - min(all_x) + 1
+    height = max(all_y) - min(all_y) + 1
     
-    # Cập nhật lại vị trí các nút theo dịch chuyển đã tính
-    for node_label in pos:
-        pos[node_label] = (pos[node_label][0] + shift_x, pos[node_label][1])
+    # Điều chỉnh kích thước figure
+    plt.figure(figsize=(width * 1.5, height * 1.5))  # Giảm hệ số nhân xuống
     
-    # Vẽ đồ thị
-    plt.figure(figsize=(12, 8))  # Giới hạn kích thước đồ thị
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-            node_size=3000, font_size=8, font_weight='bold', font_color='black')
+    # Điều chỉnh kích thước node và font
+    node_size = 3000  # Giảm kích thước node
+    font_size = 7     # Giảm kích thước font
     
-    # Vẽ nhãn cạnh
+    nx.draw(G, pos, with_labels=True, node_color='lightblue',
+            node_size=node_size, font_size=font_size, font_weight='bold',
+            font_color='black', arrows=True,
+            labels=display_names)
+    
+    # Điều chỉnh kích thước font của nhãn cạnh
     edge_labels = nx.get_edge_attributes(G, 'label')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    
-    # Tối ưu hóa bố cục để tránh chồng lấn
-    plt.tight_layout()
-    
-    # Đảm bảo không có phần nào bị cắt
-    plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=font_size)
     
     plt.title("Decision Tree Visualization")
     plt.axis('off')
+    plt.tight_layout()  # Thêm tight_layout để tối ưu không gian
     
     return plt

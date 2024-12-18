@@ -79,3 +79,4 @@ def reduce_dimensions(df, columns, n_components):
     
     return reduced_df, explained_variance
 
+
