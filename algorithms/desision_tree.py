@@ -72,7 +72,6 @@ class ID3DecisionTree:
         # Get labels and feature values for the selected samples
         labels = [self.labels[i] for i in x_ids]
         features = [self.X[i][feature_id] for i in x_ids]
-        
         # Calculate initial impurity
         if self.criterion == 'entropy':
             initial_impurity = self._calculate_entropy(labels)
@@ -80,20 +79,17 @@ class ID3DecisionTree:
         else:  # Gini
             initial_impurity = self._calculate_gini(labels)
             score_func = self._calculate_gini
-        
         # Group by feature values
         feature_groups = {}
         for label, feature in zip(labels, features):
             if feature not in feature_groups:
                 feature_groups[feature] = []
             feature_groups[feature].append(label)
-        
         # Calculate weighted impurity
         weighted_impurity = 0
         for group, group_labels in feature_groups.items():
             weight = len(group_labels) / len(labels)
             weighted_impurity += weight * score_func(group_labels)
-        
         # Information gain is the reduction in impurity
         score = initial_impurity - weighted_impurity
         return score, feature_groups

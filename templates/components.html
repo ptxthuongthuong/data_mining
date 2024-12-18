@@ -1,13 +1,13 @@
 {% macro select_columns(columns, selected_columns_name) %}
 <div class="form-group">
-    <label>Chọn các cột sử dụng:</label>
-    <div>
+    <label style="margin-bottom: 10px; display: block;">Chọn các cột sử dụng:</label>
+    <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
         {% for column in columns %}
             <input type="checkbox" 
                    id="col_{{ column }}" 
                    name="{{ selected_columns_name }}" 
                    value="{{ column }}">
-            <label for="col_{{ column }}">{{ column }}</label>
+            <label for="col_{{ column }}" style="font-weight: normal; margin-left: 5px; margin-right: 15px; margin-top: 0px">{{ column }}</label>
         {% endfor %}
     </div>
 </div>
@@ -17,10 +17,10 @@
 
 {% macro input_values(columns, unique_values) %}
     <div id="input_values">
-        <h3>Nhập dữ liệu cần phân lớp:</h3>
+        <label>Nhập dữ liệu cần phân lớp:<label>
         {% for column in columns %}
             <div id="values_{{ column }}" class="value-selection" style="display: none;">
-                <label for="{{ column }}">{{ column }}:</label>
+                <label for="{{ column }}" style="font-weight: normal;">{{ column }}:</label>
                 <select id="{{ column }}" name="input_values[{{ column }}]">
                     {% for value in unique_values[column] %}
                         <option value="{{ value }}">{{ value }}</option>

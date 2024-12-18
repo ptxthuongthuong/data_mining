@@ -2,7 +2,19 @@
 
 {% block content %}
     <div class="algorithm-container">
-        <h1>{{ algo_name }}</h1>
+        <h1>
+            {% if algo_name == 'naive_bayes' %}
+                Thuật toán Naive Bayes
+            {% elif algo_name == 'decision_tree' %}
+                Thuật toán xây dựng Cây Quyết Định
+            {% elif algo_name == 'kmeans' %}
+                Thuật toán K-Means      
+            {% elif algo_name == 'apriori' %}
+                Thuật toán Apriori   
+            {% else %}
+            Thuật toán xử lý tập thô
+            {% endif %}
+        </h1>
 
         <!-- Thông tin dataset -->
         {% if dataset_info %}
