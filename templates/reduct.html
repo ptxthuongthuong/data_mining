@@ -1,0 +1,86 @@
+{% extends "base_algorithm.html" %}
+{% block algorithm_content %}
+
+{% if dataset_info %}
+    <!-- Form section -->
+    <div class="form-section">
+        <form id="reduct-form" action="/run_reduct" method="post" enctype="multipart/form-data">
+            <!-- Các trường form giữ nguyên -->
+             <label for="target_column">Chọn cột mục tiêu (target):</label>
+             <select name="target_column" id="target_column">
+                 {% for column in dataset_info['columns'] %}
+                     <option value="{{ column }}">{{ column }}</option>
+                 {% endfor %}
+             </select>
+             <br>
+
+             <!-- Chọn thuộc tính để tính xấp xỉ -->
+             {% from "components.html" import select_attributes %}
+             {{ select_attributes(dataset_info['columns'], "selected_columns") }}
+
+             <br>
+             <button type="submit">Tính xấp xỉ và vùng biên</button>
+         </form>
+    </div>
+
+    <!-- Result section -->
+    <div id="result-container">
+        {% if result %}
+            <h3>Kết quả xấp xỉ và vùng biên:</h3>
+            <p><strong>Xấp xỉ dưới:</strong></p>
+            <p>{{ result['lower_approximation'] }}</p>
+            
+            <p><strong>Xấp xỉ trên:</strong></p>
+            <p>{{ result['upper_approximation'] }}</p>
+
+            <p><strong>Vùng biên:</strong></p>
+            <p>{{ result['boundary_region'] }}</p>
+
+            <p><strong>Vùng ngoài:</strong></p>
+            <p>{{ result['outside_region'] }}</p>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('reduct-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.innerHTML = '<p>Đang xử lý...</p>';
+            
+            fetch('/run_reduct', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(this)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                resultContainer.innerHTML = `
+                    <h3>Kết quả xấp xỉ và vùng biên:</h3>
+                    <p><strong>Xấp xỉ dưới:</strong></p>
+                    <p>${data.lower_approximation}</p>
+                    <p><strong>Xấp xỉ trên:</strong></p>
+                    <p>${data.upper_approximation}</p>
+                    <p><strong>Vùng biên:</strong></p>
+                    <p>${data.boundary_region}</p>
+                    <p><strong>Vùng ngoài:</strong></p>
+                    <p>${data.outside_region}</p>
+                `;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultContainer.innerHTML = '<p class="error-message">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+            });
+        });
+    </script>
+{% else %}
+    <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
+{% endif %}
+{% endblock %}
