@@ -6,7 +6,7 @@ from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
 from algorithms.apriori import apriori_algorithm
-from algorithms.reduct import find_decision_class, find_equivalence_classes,lower_approximation, upper_approximation, boundary_region, outside_region, find_discriminant_matrix, find_reducts
+from algorithms.reduct import find_decision_class, find_equivalence_classes,lower_approximation, upper_approximation, boundary_region, outside_region, find_reducts
 
 
 # Khởi tạo ứng dụng Flask
@@ -442,7 +442,7 @@ def run_apriori():
 def run_reduct():
     global dataset_info, uploaded_file
 
-    # Lấy file và các thông tin từ form
+    # Get form data
     object_column = request.form.get('object_column')
     decision_column = request.form.get('decision_column')
     target_value = request.form.get('target_value')
@@ -453,49 +453,42 @@ def run_reduct():
     
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
     df = pd.read_excel(filepath)
-
     
-    # Tìm tập X theo thuộc tính quyết định đã chọn
+    # Find X set based on selected decision attribute
     X = find_decision_class(df, decision_column, target_value)
-
-    # Tìm các lớp tương đương theo thuộc tính điều kiện
-    IND = find_equivalence_classes(df, condition_attributes)
-
-    # Tìm xấp xỉ trên của X
-    upper = upper_approximation(X,IND, decision_column)
     
-    # Tìm xấp xỉ dưới cuẩ X
+    # Find equivalence classes based on condition attributes
+    IND = find_equivalence_classes(df, condition_attributes)
+    
+    # Calculate approximations
+    upper = upper_approximation(X, IND, decision_column)
     lower = lower_approximation(X, IND, decision_column)
-
-    # Tìm vùng B-biên
     boundary = boundary_region(X, upper, lower)
-
-    # Tìm vùng B-ngoài
     outer = outside_region(X, IND, upper, lower)
 
-    # Tìm các reducts
+    # Extract just the object IDs
+    result_X = X[object_column].tolist()
+    result_lower = [df[object_column].tolist() for df in lower]
+    result_upper = [df[object_column].tolist() for df in upper]
+    result_boundary = [df[object_column].tolist() for df in boundary]
+    result_outer = [df[object_column].tolist() for df in outer]
+
+    # Calculate dependency degree (assuming you have this function)
+ # Tìm reduct và độ phụ thuộc
+    reduct, dependency_degree = find_reducts(df, condition_attributes, decision_column, X)
     
-
-    # Chuyển đổi kết quả thành định dạng có thể serialize được
-    result_X = X.to_dict('records')  # hoặc X.to_dict() nếu muốn hiển thị dưới dạng dictionary
-
-    # Chuyển IND (danh sách các DataFrame) thành danh sách các từ điển
-    result_IND = [df.to_dict('records') for df in IND]
-    result_upper = [eq_class.to_dict('records') for eq_class in upper]
-    result_lower = [eq_class.to_dict('records') for eq_class in lower]
-    result_boundary = [class_.to_dict('records') for class_ in boundary]
-    result_outer = [class_.to_dict('records') for class_ in outer]
-
-
     # Trả kết quả dưới dạng JSON
     return jsonify({
         "success": True,
+        "object_column": object_column,  # Thêm dòng này
+
         "X": result_X,
-        "IND": result_IND,
         "upper": result_upper,
         "lower": result_lower,
         "vùng biên": result_boundary,
-        "vùng ngoài": result_outer
+        "vùng ngoài": result_outer,
+        "reduct": reduct,
+        "dependency_degree": dependency_degree
     })
 
 
