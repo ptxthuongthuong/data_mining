@@ -1,84 +1,129 @@
 {% extends "base_algorithm.html" %}
-{% from "components.html" import select_columns %}
 {% block algorithm_content %}
+{% from "components.html" import target_values %}
+
 {% if dataset_info %}
-    <!-- Form section -->
-    <div class="form-section">
-        <form id="reduct-form" action="/run_reduct" method="post" enctype="multipart/form-data">
-            <!-- Các trường form giữ nguyên -->
-             <label for="target_column">Chọn cột mục tiêu (target):</label>
-             <select name="target_column" id="target_column">
-                 {% for column in dataset_info['columns'] %}
-                     <option value="{{ column }}">{{ column }}</option>
-                 {% endfor %}
-             </select>
-             <br>
+<div class="algorithm-form">
+    <form id="reduct-form" action="/run_reduct" method="POST">
+        <!-- Chọn cột đối tượng -->
+        <div class="form-group">
+            <label for="object_column">Chọn cột đối tượng:</label>
+            <select id="object_column" name="object_column" class="form-control">
+                {% for column in dataset_info['columns'] %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Chọn thuộc tính quyết định -->
+        <div class="form-group">
+            <label for="decision_column">Chọn thuộc tính quyết định:</label>
+            <select id="decision_column" name="decision_column" class="form-control">
+                {% for column in dataset_info['columns'] %}
+                <option value="{{ column }}" {% if column == dataset_info['columns'][-1] %}selected{% endif %}>
+                    {{ column }}
+                </option>                
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Chọn giá trị của tập mục tiêu -->
+        <label for="target_value">Chọn giá trị của thuộc tính quyết định:</label>
+        <select name="target_value" id="target_value"></select>
+        <br>
+    
+        <!-- Chọn các thuộc tính điều kiện -->
+        <div class="form-group">
+        <label for="condition_attributes">Chọn các thuộc tính điều kiện:</label>
+        <br>
+        {% for column in dataset_info['columns'] %}
+                <input type="checkbox" id="condition_{{ column }}" name="condition_attributes" value="{{ column }}">
+                <label for="condition_{{ column }}">{{ column }}</label>
+        {% endfor %}
+        </div>
 
-             <!-- Chọn thuộc tính để tính xấp xỉ -->
-             {{ select_columns (dataset_info['columns'], "selected_columns") }}
+        <!-- Nút chạy thuật toán -->
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Chạy Thuật Toán</button>
+        </div>
+    </form>
 
-             <br>
-             <button type="submit">Tính xấp xỉ và vùng biên</button>
-         </form>
-    </div>
-
-    <!-- Result section -->
-    <div id="result-container">
-        {% if result %}
-            <h3>Kết quả xấp xỉ và vùng biên:</h3>
-            <p><strong>Xấp xỉ dưới:</strong></p>
-            <p>{{ result['lower_approximation'] }}</p>
-            
-            <p><strong>Xấp xỉ trên:</strong></p>
-            <p>{{ result['upper_approximation'] }}</p>
-
-            <p><strong>Vùng biên:</strong></p>
-            <p>{{ result['boundary_region'] }}</p>
-
-            <p><strong>Vùng ngoài:</strong></p>
-            <p>{{ result['outside_region'] }}</p>
-        {% endif %}
+    <!-- Kết quả -->
+    <div class="result-section">
+        <h3>Kết quả:</h3>
+        <div id="result-X"></div>
+        <div id="result-IND"></div>
+        <div id="result-upper"></div>
+        <div id="result-lower"></div>
+        <div id="result-boundary"></div>
+        <div id="result-outer"></div>
     </div>
 
     <script>
-        document.getElementById('reduct-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            const resultContainer = document.getElementById('result-container');
-            resultContainer.innerHTML = '<p>Đang xử lý...</p>';
-            
-            fetch('/run_reduct', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: new FormData(this)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                resultContainer.innerHTML = `
-                    <h3>Kết quả xấp xỉ và vùng biên:</h3>
-                    <p><strong>Xấp xỉ dưới:</strong></p>
-                    <p>${data.lower_approximation}</p>
-                    <p><strong>Xấp xỉ trên:</strong></p>
-                    <p>${data.upper_approximation}</p>
-                    <p><strong>Vùng biên:</strong></p>
-                    <p>${data.boundary_region}</p>
-                    <p><strong>Vùng ngoài:</strong></p>
-                    <p>${data.outside_region}</p>
-                `;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                resultContainer.innerHTML = '<p class="error-message">Có lỗi xảy ra khi xử lý yêu cầu</p>';
+        document.addEventListener('DOMContentLoaded', function () {
+            const decisionColumnSelect = document.getElementById('decision_column');
+            const targetValueSelect = document.getElementById('target_value');
+
+            // Lắng nghe sự thay đổi của combo box cột thuộc tính quyết định
+            decisionColumnSelect.addEventListener('change', function () {
+                const selectedColumn = this.value;
+
+                fetch(`/get_unique_values?column=${encodeURIComponent(selectedColumn)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        targetValueSelect.innerHTML = '';
+                        data.unique_values.forEach(value => {
+                            const option = document.createElement('option');
+                            option.value = value;
+                            option.textContent = value;
+                            targetValueSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching unique values:', error);
+                    });
             });
+
+            decisionColumnSelect.dispatchEvent(new Event('change'));
+
+            // Xử lý khi submit form
+            document.getElementById('reduct-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                const formData = new FormData(this);
+
+                fetch('/run_reduct', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Lỗi: " + data.error);
+                    } else {
+                        displayResults(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+
+            function displayResults(data) {
+                document.getElementById('result-X').innerHTML = `<h4>Tập X:</h4><pre>${JSON.stringify(data.X, null, 2)}</pre>`;
+                document.getElementById('result-IND').innerHTML = `<h4>IND:</h4>${formatList(data.IND)}`;
+                document.getElementById('result-upper').innerHTML = `<h4>Xấp xỉ trên:</h4>${formatList(data.upper)}`;
+                document.getElementById('result-lower').innerHTML = `<h4>Xấp xỉ dưới:</h4>${formatList(data.lower)}`;
+                document.getElementById('result-boundary').innerHTML = `<h4>Vùng biên:</h4>${formatList(data['vùng biên'])}`;
+                document.getElementById('result-outer').innerHTML = `<h4>Vùng ngoài:</h4>${formatList(data['vùng ngoài'])}`;
+            }
+
+            function formatList(list) {
+                return list.map((item, index) => `<div><strong>Lớp ${index + 1}:</strong><pre>${JSON.stringify(item, null, 2)}</pre></div>`).join('');
+            }
         });
     </script>
+</div>
 {% else %}
     <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
 {% endif %}

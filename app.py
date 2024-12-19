@@ -6,7 +6,7 @@ from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
 from algorithms.apriori import apriori_algorithm
-from algorithms.reduct import preprocess_data, lower_approximation, upper_approximation, boundary_region, outside_region
+from algorithms.reduct import find_decision_class, find_equivalence_classes,lower_approximation, upper_approximation, boundary_region, outside_region, find_discriminant_matrix, find_reducts
 
 
 # Khởi tạo ứng dụng Flask
@@ -440,42 +440,81 @@ def run_apriori():
 @app.route('/run_reduct', methods=['POST'])
 def run_reduct():
     global dataset_info, uploaded_file
-    if not dataset_info:
-        return "No dataset uploaded. Please upload a file first."
 
     # Lấy file và các thông tin từ form
-    target_column = request.form.get('target_column')  # Thuộc tính quyết định
-    selected_columns = request.form.getlist('selected_columns')  # Các thuộc tính điều kiện
+    object_column = request.form.get('object_column')
+    decision_column = request.form.get('decision_column')
+    target_value = request.form.get('target_value')
+    condition_attributes = request.form.getlist('condition_attributes')
 
-    # Kiểm tra xem người dùng đã chọn các thuộc tính chưa
-    if not target_column or not selected_columns:
-        return "Vui lòng chọn thuộc tính quyết định và các thuộc tính điều kiện."
+    if not object_column or not decision_column or not target_value or not condition_attributes:
+        return jsonify({"error": "Vui lòng chọn giá trị và thuộc tính."})
     
-    # Đọc file Excel
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
     df = pd.read_excel(filepath)
-    print(f"Filepath: {filepath}")
 
-    # Tiền xử lý dữ liệu
-    df = preprocess_data(df, normalize=True)
+    
+    # Tìm tập X theo thuộc tính quyết định đã chọn
+    X = find_decision_class(df, decision_column, target_value)
 
-    # Tính toán xấp xỉ dưới, xấp xỉ trên, vùng biên và vùng ngoài
-    lower = lower_approximation(df, target_column, selected_columns)
-    upper = upper_approximation(df, target_column, selected_columns)
-    boundary = boundary_region(df, target_column, selected_columns)
-    outside = outside_region(df, target_column, selected_columns)
+    # Tìm các lớp tương đương theo thuộc tính điều kiện
+    IND = find_equivalence_classes(df, condition_attributes)
 
-    # Chuẩn bị kết quả để trả về
-    result = {
-        "lower_approximation": lower.to_string(),
-        "upper_approximation": upper.to_string(),
-        "boundary": boundary.to_string(),
-        "outside": outside.to_string(),
-    }
+    # Tìm xấp xỉ trên của X
+    upper = upper_approximation(X,IND, decision_column)
+    
+    # Tìm xấp xỉ dưới cuẩ X
+    lower = lower_approximation(X, IND, decision_column)
 
-    # Trả kết quả cho người dùng
-    return render_template('reduct.html', result=result)
+    # Tìm vùng B-biên
+    boundary = boundary_region(X, upper, lower)
 
+    # Tìm vùng B-ngoài
+    outer = outside_region(X, IND, upper, lower)
+
+    # Tìm các reducts
+    
+
+    # Chuyển đổi kết quả thành định dạng có thể serialize được
+    result_X = X.to_dict('records')  # hoặc X.to_dict() nếu muốn hiển thị dưới dạng dictionary
+
+    # Chuyển IND (danh sách các DataFrame) thành danh sách các từ điển
+    result_IND = [df.to_dict('records') for df in IND]
+    result_upper = [eq_class.to_dict('records') for eq_class in upper]
+    result_lower = [eq_class.to_dict('records') for eq_class in lower]
+    result_boundary = [class_.to_dict('records') for class_ in boundary]
+    result_outer = [class_.to_dict('records') for class_ in outer]
+
+
+    # Trả kết quả dưới dạng JSON
+    return jsonify({
+        "success": True,
+        "X": result_X,
+        "IND": result_IND,
+        "upper": result_upper,
+        "lower": result_lower,
+        "vùng biên": result_boundary,
+        "vùng ngoài": result_outer
+    })
+
+
+@app.route('/get_unique_values', methods=['GET'])
+def get_unique_values():
+    column = request.args.get('column')
+    if not column:
+        return jsonify({'error': 'No column specified'}), 400
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+    try:
+        data = pd.read_excel(filepath)
+        if column not in data.columns:
+            return jsonify({'error': 'Invalid column specified'}), 400
+
+        unique_values = data[column].unique().tolist()
+        return jsonify({'unique_values': unique_values})
+    except Exception as e:
+        print(f"Error processing column: {e}")
+        return jsonify({'error': 'Failed to process the file'}), 500
 
 if __name__ == '__main__':
     # Đảm bảo thư mục upload tồn tại
