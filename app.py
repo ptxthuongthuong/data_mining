@@ -437,33 +437,66 @@ def run_apriori():
                            uploaded_file=uploaded_file)
 
 
+
 @app.route('/run_reduct', methods=['POST'])
 def run_reduct():
     global dataset_info, uploaded_file
 
     # Lấy file và các thông tin từ form
-    object_column = request.form.get('object_column') # Cột đối tượng
-    decision_column = request.form.get('decision_column')  # Thuộc tính quyết định
-    target_value = request.form.get('target_value') # Giá trị của tập mục tiêu
-    condition_attributes = request.form.getlist('condition_attributes')  # Các thuộc tính điều kiện
+    object_column = request.form.get('object_column')
+    decision_column = request.form.get('decision_column')
+    target_value = request.form.get('target_value')
+    condition_attributes = request.form.getlist('condition_attributes')
 
-
-    # Kiểm tra xem người dùng đã chọn các thuộc tính chưa
     if not object_column or not decision_column or not target_value or not condition_attributes:
-        return "Vui lòng chọn giá trị và thuộc tính."
+        return jsonify({"error": "Vui lòng chọn giá trị và thuộc tính."})
     
-    # Đọc file Excel
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
     df = pd.read_excel(filepath)
-    print(f"Filepath: {filepath}")
 
-
-    # Tính toán xấp xỉ dưới, xấp xỉ trên, vùng biên và vùng ngoài
+    
+    # Tìm tập X theo thuộc tính quyết định đã chọn
     X = find_decision_class(df, decision_column, target_value)
-    result = X
 
-    # Trả kết quả cho người dùng
-    return render_template('reduct.html', result = result)
+    # Tìm các lớp tương đương theo thuộc tính điều kiện
+    IND = find_equivalence_classes(df, condition_attributes)
+
+    # Tìm xấp xỉ trên của X
+    upper = upper_approximation(X,IND, decision_column)
+    
+    # Tìm xấp xỉ dưới cuẩ X
+    lower = lower_approximation(X, IND, decision_column)
+
+    # Tìm vùng B-biên
+    boundary = boundary_region(X, upper, lower)
+
+    # Tìm vùng B-ngoài
+    outer = outside_region(X, IND, upper, lower)
+
+    # Tìm các reducts
+    
+
+    # Chuyển đổi kết quả thành định dạng có thể serialize được
+    result_X = X.to_dict('records')  # hoặc X.to_dict() nếu muốn hiển thị dưới dạng dictionary
+
+    # Chuyển IND (danh sách các DataFrame) thành danh sách các từ điển
+    result_IND = [df.to_dict('records') for df in IND]
+    result_upper = [eq_class.to_dict('records') for eq_class in upper]
+    result_lower = [eq_class.to_dict('records') for eq_class in lower]
+    result_boundary = [class_.to_dict('records') for class_ in boundary]
+    result_outer = [class_.to_dict('records') for class_ in outer]
+
+
+    # Trả kết quả dưới dạng JSON
+    return jsonify({
+        "success": True,
+        "X": result_X,
+        "IND": result_IND,
+        "upper": result_upper,
+        "lower": result_lower,
+        "vùng biên": result_boundary,
+        "vùng ngoài": result_outer
+    })
 
 
 @app.route('/get_unique_values', methods=['GET'])
@@ -483,6 +516,8 @@ def get_unique_values():
     except Exception as e:
         print(f"Error processing column: {e}")
         return jsonify({'error': 'Failed to process the file'}), 500
+
+
 
 
 if __name__ == '__main__':

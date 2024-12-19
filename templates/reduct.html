@@ -4,7 +4,7 @@
 
 {% if dataset_info %}
 <div class="algorithm-form">
-    <form id = "reduct_form" action="/run_reduct" method="POST">
+    <form id="reduct-form" action="/run_reduct" method="POST">
         <!-- Chọn cột đối tượng -->
         <div class="form-group">
             <label for="object_column">Chọn cột đối tượng:</label>
@@ -29,9 +29,7 @@
     
         <!-- Chọn giá trị của tập mục tiêu -->
         <label for="target_value">Chọn giá trị của thuộc tính quyết định:</label>
-        <select name="target_value" id="target_value">
-            
-        </select>
+        <select name="target_value" id="target_value"></select>
         <br>
     
         <!-- Chọn các thuộc tính điều kiện -->
@@ -44,88 +42,88 @@
         {% endfor %}
         </div>
 
-    
         <!-- Nút chạy thuật toán -->
         <div class="form-group">
             <button type="submit" class="btn btn-primary">Chạy Thuật Toán</button>
         </div>
     </form>
-    
 
+    <!-- Kết quả -->
     <div class="result-section">
-    <!-- Hiển thị kết quả -->
-    {% if result %}
         <h3>Kết quả:</h3>
-        <textarea id="result" rows="10" readonly>{{ result }}</textarea>
-    {% endif %}
+        <div id="result-X"></div>
+        <div id="result-IND"></div>
+        <div id="result-upper"></div>
+        <div id="result-lower"></div>
+        <div id="result-boundary"></div>
+        <div id="result-outer"></div>
     </div>
-
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-        const decisionColumnSelect = document.getElementById('decision_column');
-        const targetValueSelect = document.getElementById('target_value');
+            const decisionColumnSelect = document.getElementById('decision_column');
+            const targetValueSelect = document.getElementById('target_value');
 
-        // Lắng nghe sự thay đổi của combo box cột thuộc tính quyết định
-        decisionColumnSelect.addEventListener('change', function () {
-            const selectedColumn = this.value;
+            // Lắng nghe sự thay đổi của combo box cột thuộc tính quyết định
+            decisionColumnSelect.addEventListener('change', function () {
+                const selectedColumn = this.value;
 
-            // Gửi request tới Flask để lấy giá trị duy nhất của cột đã chọn
-            fetch(`/get_unique_values?column=${encodeURIComponent(selectedColumn)}`)
+                fetch(`/get_unique_values?column=${encodeURIComponent(selectedColumn)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        targetValueSelect.innerHTML = '';
+                        data.unique_values.forEach(value => {
+                            const option = document.createElement('option');
+                            option.value = value;
+                            option.textContent = value;
+                            targetValueSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching unique values:', error);
+                    });
+            });
+
+            decisionColumnSelect.dispatchEvent(new Event('change'));
+
+            // Xử lý khi submit form
+            document.getElementById('reduct-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                const formData = new FormData(this);
+
+                fetch('/run_reduct', {
+                    method: 'POST',
+                    body: formData
+                })
                 .then(response => response.json())
                 .then(data => {
-                    // Xóa các option cũ trong combo box giá trị
-                    targetValueSelect.innerHTML = '';
-                    
-                    // Thêm các giá trị duy nhất vào combo box
-                    data.unique_values.forEach(value => {
-                        const option = document.createElement('option');
-                        option.value = value;
-                        option.textContent = value;
-                        targetValueSelect.appendChild(option);
-                    });
+                    if (data.error) {
+                        alert("Lỗi: " + data.error);
+                    } else {
+                        displayResults(data);
+                    }
                 })
                 .catch(error => {
-                    console.error('Error fetching unique values:', error);
+                    console.error('Error:', error);
                 });
-        });
-
-        // Kích hoạt sự kiện thay đổi lần đầu để load giá trị mặc định
-        decisionColumnSelect.dispatchEvent(new Event('change'));
-    });
-        
-
-        // Xử lý khi submit form
-        document.getElementById('reduct-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const resultContainer = document.getElementById('result-container');
-            resultContainer.innerHTML = '<p>Đang xử lý...</p>';
-
-            fetch('/run_reduct', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: new FormData(this)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(html => {
-                resultContainer.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                resultContainer.innerHTML = '<p class="error-message">Có lỗi xảy ra khi xử lý yêu cầu</p>';
             });
+
+            function displayResults(data) {
+                document.getElementById('result-X').innerHTML = `<h4>Tập X:</h4><pre>${JSON.stringify(data.X, null, 2)}</pre>`;
+                document.getElementById('result-IND').innerHTML = `<h4>IND:</h4>${formatList(data.IND)}`;
+                document.getElementById('result-upper').innerHTML = `<h4>Xấp xỉ trên:</h4>${formatList(data.upper)}`;
+                document.getElementById('result-lower').innerHTML = `<h4>Xấp xỉ dưới:</h4>${formatList(data.lower)}`;
+                document.getElementById('result-boundary').innerHTML = `<h4>Vùng biên:</h4>${formatList(data['vùng biên'])}`;
+                document.getElementById('result-outer').innerHTML = `<h4>Vùng ngoài:</h4>${formatList(data['vùng ngoài'])}`;
+            }
+
+            function formatList(list) {
+                return list.map((item, index) => `<div><strong>Lớp ${index + 1}:</strong><pre>${JSON.stringify(item, null, 2)}</pre></div>`).join('');
+            }
         });
     </script>
-
-
+</div>
 {% else %}
     <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
 {% endif %}

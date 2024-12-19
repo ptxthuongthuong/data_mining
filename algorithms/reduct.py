@@ -1,3 +1,5 @@
+# reduct.py (module giảm chiều)
+
 import pandas as pd
 import numpy as np
 
@@ -14,28 +16,45 @@ def find_equivalence_classes(dataset, condition_attributes):
     return equivalence_classes
 
 # Hàm tìm xấp xỉ trên của tập X theo tập thuộc tính B
-def upper_approximation(X, equivalence_classes):
+def upper_approximation(X, equivalence_classes, decision_column):
     upper = []
+    target_value = X[decision_column].iloc[0]  # Lấy giá trị duy nhất của decision_column trong X
     for eq_class in equivalence_classes:
-        if not eq_class[eq_class['decision_attribute'] == X['decision_attribute']].empty:
+        if not eq_class[eq_class[decision_column] == target_value].empty:
             upper.append(eq_class)
     return upper
 
 # Hàm tìm xấp xỉ dưới của tập X theo tập thuộc tính B
-def lower_approximation(X, equivalence_classes):
+def lower_approximation(X, equivalence_classes, decision_column):
     lower = []
+    # Lấy giá trị của thuộc tính quyết định trong X
+    target_value = X[decision_column].iloc[0]
+    
     for eq_class in equivalence_classes:
-        if eq_class['decision_attribute'].iloc[0] == X['decision_attribute']:
+        # Kiểm tra xem lớp tương đương có chứa đối tượng với giá trị thuộc tính quyết định giống với X không
+        if eq_class[eq_class[decision_column] == target_value].shape[0] > 0:
             lower.append(eq_class)
+
     return lower
+
 
 # Hàm tìm vùng biên của tập X
 def boundary_region(X, upper, lower):
-    return [class_ for class_ in upper if class_ not in lower]
+    boundary = []
+    for class_ in upper:
+        if not any(class_.equals(lower_class) for lower_class in lower):  # Kiểm tra nếu không có lớp nào trong lower tương đương với class_
+            boundary.append(class_)
+    return boundary
+
 
 # Hàm tìm vùng ngoài của tập X
 def outside_region(X, equivalence_classes, upper, lower):
-    return [class_ for class_ in equivalence_classes if class_ not in upper]
+    outside = []
+    for class_ in equivalence_classes:
+        if not any(class_.equals(upper_class) for upper_class in upper):  # Kiểm tra nếu class_ không có trong upper
+            outside.append(class_)
+    return outside
+
 
 # Hàm tìm các reducts (tập con các thuộc tính quan trọng nhất)
 def find_reducts(dataset, condition_attributes, decision_attribute):
