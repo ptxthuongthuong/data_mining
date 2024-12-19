@@ -1,52 +1,107 @@
 {% extends "base_algorithm.html" %}
-{% from "components.html" import select_columns %}
 {% block algorithm_content %}
+{% from "components.html" import target_values %}
+
 {% if dataset_info %}
-    <!-- Form section -->
-    <div class="form-section">
-        <form id="reduct-form" action="/run_reduct" method="post" enctype="multipart/form-data">
-            <!-- Các trường form giữ nguyên -->
-             <label for="target_column">Chọn cột mục tiêu (target):</label>
-             <select name="target_column" id="target_column">
-                 {% for column in dataset_info['columns'] %}
-                     <option value="{{ column }}">{{ column }}</option>
-                 {% endfor %}
-             </select>
-             <br>
-
-             <!-- Chọn thuộc tính để tính xấp xỉ -->
-             {{ select_columns (dataset_info['columns'], "selected_columns") }}
-
-             <br>
-             <button type="submit">Tính xấp xỉ và vùng biên</button>
-         </form>
-    </div>
-
-    <!-- Result section -->
-    <div id="result-container">
-        {% if result %}
-            <h3>Kết quả xấp xỉ và vùng biên:</h3>
-            <p><strong>Xấp xỉ dưới:</strong></p>
-            <p>{{ result['lower_approximation'] }}</p>
+<div class="algorithm-form">
+    <form id = "reduct_form" action="/run_reduct" method="POST">
+        <!-- Chọn cột đối tượng -->
+        <div class="form-group">
+            <label for="object_column">Chọn cột đối tượng:</label>
+            <select id="object_column" name="object_column" class="form-control">
+                {% for column in dataset_info['columns'] %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Chọn thuộc tính quyết định -->
+        <div class="form-group">
+            <label for="decision_column">Chọn thuộc tính quyết định:</label>
+            <select id="decision_column" name="decision_column" class="form-control">
+                {% for column in dataset_info['columns'] %}
+                <option value="{{ column }}" {% if column == dataset_info['columns'][-1] %}selected{% endif %}>
+                    {{ column }}
+                </option>                
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Chọn giá trị của tập mục tiêu -->
+        <label for="target_value">Chọn giá trị của thuộc tính quyết định:</label>
+        <select name="target_value" id="target_value">
             
-            <p><strong>Xấp xỉ trên:</strong></p>
-            <p>{{ result['upper_approximation'] }}</p>
+        </select>
+        <br>
+    
+        <!-- Chọn các thuộc tính điều kiện -->
+        <div class="form-group">
+        <label for="condition_attributes">Chọn các thuộc tính điều kiện:</label>
+        <br>
+        {% for column in dataset_info['columns'] %}
+                <input type="checkbox" id="condition_{{ column }}" name="condition_attributes" value="{{ column }}">
+                <label for="condition_{{ column }}">{{ column }}</label>
+        {% endfor %}
+        </div>
 
-            <p><strong>Vùng biên:</strong></p>
-            <p>{{ result['boundary_region'] }}</p>
+    
+        <!-- Nút chạy thuật toán -->
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Chạy Thuật Toán</button>
+        </div>
+    </form>
+    
 
-            <p><strong>Vùng ngoài:</strong></p>
-            <p>{{ result['outside_region'] }}</p>
-        {% endif %}
+    <div class="result-section">
+    <!-- Hiển thị kết quả -->
+    {% if result %}
+        <h3>Kết quả:</h3>
+        <textarea id="result" rows="10" readonly>{{ result }}</textarea>
+    {% endif %}
     </div>
+
 
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        const decisionColumnSelect = document.getElementById('decision_column');
+        const targetValueSelect = document.getElementById('target_value');
+
+        // Lắng nghe sự thay đổi của combo box cột thuộc tính quyết định
+        decisionColumnSelect.addEventListener('change', function () {
+            const selectedColumn = this.value;
+
+            // Gửi request tới Flask để lấy giá trị duy nhất của cột đã chọn
+            fetch(`/get_unique_values?column=${encodeURIComponent(selectedColumn)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Xóa các option cũ trong combo box giá trị
+                    targetValueSelect.innerHTML = '';
+                    
+                    // Thêm các giá trị duy nhất vào combo box
+                    data.unique_values.forEach(value => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = value;
+                        targetValueSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching unique values:', error);
+                });
+        });
+
+        // Kích hoạt sự kiện thay đổi lần đầu để load giá trị mặc định
+        decisionColumnSelect.dispatchEvent(new Event('change'));
+    });
+        
+
+        // Xử lý khi submit form
         document.getElementById('reduct-form').addEventListener('submit', function(event) {
             event.preventDefault();
-            
+
             const resultContainer = document.getElementById('result-container');
             resultContainer.innerHTML = '<p>Đang xử lý...</p>';
-            
+
             fetch('/run_reduct', {
                 method: 'POST',
                 headers: {
@@ -58,20 +113,10 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.json();
+                return response.text();
             })
-            .then(data => {
-                resultContainer.innerHTML = `
-                    <h3>Kết quả xấp xỉ và vùng biên:</h3>
-                    <p><strong>Xấp xỉ dưới:</strong></p>
-                    <p>${data.lower_approximation}</p>
-                    <p><strong>Xấp xỉ trên:</strong></p>
-                    <p>${data.upper_approximation}</p>
-                    <p><strong>Vùng biên:</strong></p>
-                    <p>${data.boundary_region}</p>
-                    <p><strong>Vùng ngoài:</strong></p>
-                    <p>${data.outside_region}</p>
-                `;
+            .then(html => {
+                resultContainer.innerHTML = html;
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -79,6 +124,8 @@
             });
         });
     </script>
+
+
 {% else %}
     <p>Vui lòng tải lên file dữ liệu trước khi sử dụng thuật toán này.</p>
 {% endif %}
