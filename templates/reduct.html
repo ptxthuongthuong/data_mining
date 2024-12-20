@@ -118,9 +118,19 @@
             return arrays.flat().join(', ');
     }
 
-            // Display results
+            function formatSet(classes) {
+            // Chuyển đổi mỗi lớp thành chuỗi dạng {D1, D2}
+            const formattedClasses = classes.map(classItems => {
+                return `{${classItems.join(', ')}}`;
+            });
+            return `{${formattedClasses.join(', ')}}`;
+            }
+
+// Hiển thị kết quả
             document.getElementById('result-IND').innerHTML = 
-            `<h4>Các lớp tương đương:</h4>${formatObjects(data.IND)}`;
+            `<h4>Các lớp tương đương:</h4>${formatSet(data.IND)}`;
+            // Display results
+            
             document.getElementById('result-lower').innerHTML = 
             `<h4>Xấp xỉ dưới:</h4>${formatObjects(data.lower)}`;
     
@@ -137,7 +147,7 @@
             document.getElementById('result-reduct').innerHTML = 
             `<h4>Rút gọn tập thô:</h4>${data.reduct.join(', ')}`;
     
-            document.getElementById('result-degree').innerHTML =  // Sửa id này
+            document.getElementById('result-degree').innerHTML =  
             `<h4>Độ phụ thuộc:</h4>${typeof data.dependency_degree !== 'undefined' ? data.dependency_degree.toFixed(4) : '0.0000'}`;
 }
 
