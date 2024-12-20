@@ -6,7 +6,7 @@ from algorithms.utils import update_dataset_info, encode_data
 from algorithms.kmeans import preprocess_data, kmeans_clustering
 from algorithms.desision_tree import ID3DecisionTree, plot_custom_decision_tree
 from algorithms.apriori import apriori_algorithm
-from algorithms.reduct import find_decision_class, find_equivalence_classes,lower_approximation, upper_approximation, boundary_region, outside_region, find_discriminant_matrix, find_reducts
+from algorithms.reduct import find_decision_class, find_equivalence_classes,lower_approximation, upper_approximation, boundary_region, outside_region, find_reducts, calculate_dependency_degree
 
 
 # Khởi tạo ứng dụng Flask
