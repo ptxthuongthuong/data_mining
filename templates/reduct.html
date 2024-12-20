@@ -57,6 +57,9 @@
         <div id="result-lower"></div>
         <div id="result-boundary"></div>
         <div id="result-outer"></div>
+        <div id="result-reduct"></div>
+        <div id="result-degree"></div>
+
     </div>
 
     <script>
@@ -110,13 +113,33 @@
             });
 
             function displayResults(data) {
-                document.getElementById('result-X').innerHTML = `<h4>Tập X:</h4><pre>${JSON.stringify(data.X, null, 2)}</pre>`;
-                document.getElementById('result-IND').innerHTML = `<h4>IND:</h4>${formatList(data.IND)}`;
-                document.getElementById('result-upper').innerHTML = `<h4>Xấp xỉ trên:</h4>${formatList(data.upper)}`;
-                document.getElementById('result-lower').innerHTML = `<h4>Xấp xỉ dưới:</h4>${formatList(data.lower)}`;
-                document.getElementById('result-boundary').innerHTML = `<h4>Vùng biên:</h4>${formatList(data['vùng biên'])}`;
-                document.getElementById('result-outer').innerHTML = `<h4>Vùng ngoài:</h4>${formatList(data['vùng ngoài'])}`;
-            }
+            // Helper function to flatten arrays and join with commas
+            function formatObjects(arrays) {
+            return arrays.flat().join(', ');
+    }
+
+            // Display results
+            document.getElementById('result-IND').innerHTML = 
+            `<h4>Các lớp tương đương:</h4>${formatObjects(data.IND)}`;
+            document.getElementById('result-lower').innerHTML = 
+            `<h4>Xấp xỉ dưới:</h4>${formatObjects(data.lower)}`;
+    
+            document.getElementById('result-upper').innerHTML = 
+            `<h4>Xấp xỉ trên:</h4>${formatObjects(data.upper)}`;
+    
+            document.getElementById('result-boundary').innerHTML = 
+            `<h4>Vùng B-biên:</h4>${formatObjects(data['vùng biên'])}`;
+    
+            document.getElementById('result-outer').innerHTML = 
+            `<h4>Vùng B-ngoài:</h4>${formatObjects(data['vùng ngoài'])}`;
+
+            // Add reduct and dependency degree results
+            document.getElementById('result-reduct').innerHTML = 
+            `<h4>Rút gọn tập thô:</h4>${data.reduct.join(', ')}`;
+    
+            document.getElementById('result-degree').innerHTML =  // Sửa id này
+            `<h4>Độ phụ thuộc:</h4>${typeof data.dependency_degree !== 'undefined' ? data.dependency_degree.toFixed(4) : '0.0000'}`;
+}
 
             function formatList(list) {
                 return list.map((item, index) => `<div><strong>Lớp ${index + 1}:</strong><pre>${JSON.stringify(item, null, 2)}</pre></div>`).join('');
